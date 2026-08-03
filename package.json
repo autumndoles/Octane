@@ -1,10 +1,13 @@
 {
   "name": "octane",
-  "version": "1.0.0",
-  "description": "Octane - a cooperative multiplayer gas station management game",
+  "version": "3.0.0",
+  "description": "Octane - private room-based cooperative gas station game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "express": "^5.1.0",
