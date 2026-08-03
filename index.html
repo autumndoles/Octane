@@ -7,7 +7,10 @@
 
 <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0"
+    content="width=device-width,
+    initial-scale=1.0,
+    maximum-scale=1.0,
+    user-scalable=no"
 >
 
 <title>Octane</title>
@@ -22,35 +25,36 @@
 
 html,
 body {
-
     margin: 0;
-
     padding: 0;
 
     width: 100%;
-
     height: 100%;
 
     overflow: hidden;
 
-    background: #171717;
+    background: #151515;
 
     color: white;
 
-    font-family:
-        Arial,
-        sans-serif;
+    font-family: Arial, sans-serif;
+
+    touch-action: none;
+}
+
+button,
+input {
+    font: inherit;
 }
 
 button {
+    border: 0;
 
-    border: none;
+    border-radius: 8px;
 
-    border-radius: 7px;
+    padding: 12px 18px;
 
-    padding: 11px;
-
-    margin: 4px;
+    margin: 5px;
 
     color: white;
 
@@ -61,140 +65,118 @@ button {
     cursor: pointer;
 }
 
-button:hover {
-
-    filter: brightness(1.2);
+button:active {
+    transform: scale(.97);
 }
 
 input {
-
     width: 100%;
 
     padding: 12px;
 
-    margin: 7px 0;
+    margin: 6px 0;
 
-    border: none;
+    border: 0;
 
-    border-radius: 7px;
+    border-radius: 8px;
 
-    font-size: 16px;
+    font-size: 17px;
 }
 
 .screen {
-
     position: fixed;
 
     inset: 0;
 
     display: flex;
 
-    align-items: center;
-
     justify-content: center;
+
+    align-items: center;
 
     background: #171717;
 
     z-index: 100;
 }
 
-.box {
+.hidden {
+    display: none !important;
+}
 
+.box {
     width: min(
-        90%,
+        92%,
         420px
     );
 
-    padding: 30px;
+    padding: 28px;
 
     text-align: center;
 
+    background: #292929;
+
     border-radius: 12px;
-
-    background: #252525;
-
-    box-shadow:
-        0 10px 30px
-        rgba(
-            0,
-            0,
-            0,
-            0.5
-        );
 }
 
 .logo {
-
-    font-size: 60px;
+    font-size: 58px;
 }
 
 h1 {
-
-    margin: 5px 0;
+    margin: 5px;
 
     font-size: 42px;
 }
 
-.hidden {
-
-    display: none !important;
-}
-
-#error {
-
+#error,
+#joinError {
     color: #ff7777;
 
     margin-top: 10px;
 }
 
 #roomCode {
-
-    font-size: 38px;
-
-    letter-spacing: 8px;
-
-    margin: 20px 0;
+    font-size: 42px;
 
     font-weight: bold;
+
+    letter-spacing: 7px;
+
+    margin: 20px;
 }
 
 #playersList {
-
-    margin: 15px 0;
-
-    padding: 10px;
-
-    border-radius: 7px;
-
     background: #191919;
 
-    min-height: 60px;
+    padding: 12px;
+
+    border-radius: 8px;
+
+    margin: 12px 0;
 }
 
 #gameCanvas {
+    position: fixed;
 
-    display: block;
+    inset: 0;
 
     width: 100%;
 
     height: 100%;
 
-    image-rendering: auto;
+    display: block;
 }
 
 #hud {
-
     position: fixed;
 
-    top: 10px;
+    top: 8px;
 
-    left: 10px;
+    left: 8px;
 
     z-index: 10;
 
-    padding: 10px;
-
-    min-width: 190px;
+    padding: 9px;
 
     border-radius: 8px;
 
@@ -203,87 +185,58 @@ h1 {
             0,
             0,
             0,
-            0.8
-        );
-
-    font-size: 14px;
-}
-
-#hud h2 {
-
-    margin: 0 0 7px;
-}
-
-.stat {
-
-    margin: 3px 0;
-}
-
-#menu {
-
-    position: fixed;
-
-    top: 10px;
-
-    right: 10px;
-
-    z-index: 10;
-
-    width: 220px;
-
-    padding: 10px;
-
-    border-radius: 8px;
-
-    background:
-        rgba(
-            0,
-            0,
-            0,
-            0.8
-        );
-}
-
-#menu h3 {
-
-    margin: 5px 0 8px;
-}
-
-#menu button {
-
-    width: 100%;
-}
-
-#controls {
-
-    position: fixed;
-
-    bottom: 10px;
-
-    left: 10px;
-
-    z-index: 10;
-
-    padding: 8px;
-
-    border-radius: 7px;
-
-    background:
-        rgba(
-            0,
-            0,
-            0,
-            0.75
+            .8
         );
 
     font-size: 13px;
 }
 
-#roomDisplay {
+#hud h2 {
+    margin: 0 0 5px;
+}
 
+#menu {
     position: fixed;
 
-    top: 10px;
+    right: 8px;
+
+    top: 8px;
+
+    z-index: 10;
+
+    width: 180px;
+
+    padding: 8px;
+
+    border-radius: 8px;
+
+    background:
+        rgba(
+            0,
+            0,
+            0,
+            .8
+        );
+
+    max-height: 90vh;
+
+    overflow-y: auto;
+}
+
+#menu button {
+    width: 100%;
+
+    padding: 8px;
+
+    margin: 2px 0;
+
+    font-size: 12px;
+}
+
+#roomDisplay {
+    position: fixed;
+
+    top: 8px;
 
     left: 50%;
 
@@ -292,19 +245,148 @@ h1 {
 
     z-index: 20;
 
-    padding: 7px 15px;
-
-    border-radius: 20px;
+    padding: 7px 14px;
 
     background:
         rgba(
             0,
             0,
             0,
-            0.8
+            .8
         );
 
-    font-weight: bold;
+    border-radius: 20px;
+}
+
+#controls {
+    position: fixed;
+
+    left: 8px;
+
+    bottom: 8px;
+
+    z-index: 20;
+
+    padding: 8px;
+
+    background:
+        rgba(
+            0,
+            0,
+            0,
+            .75
+        );
+
+    border-radius: 8px;
+
+    font-size: 12px;
+}
+
+/* Mobile joystick */
+
+#joystick {
+    display: none;
+
+    position: fixed;
+
+    left: 25px;
+
+    bottom: 25px;
+
+    width: 120px;
+
+    height: 120px;
+
+    border-radius: 50%;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            .15
+        );
+
+    z-index: 30;
+}
+
+#stick {
+    position: absolute;
+
+    left: 35px;
+
+    top: 35px;
+
+    width: 50px;
+
+    height: 50px;
+
+    border-radius: 50%;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            .5
+        );
+}
+
+#interactButton {
+    display: none;
+
+    position: fixed;
+
+    right: 25px;
+
+    bottom: 35px;
+
+    width: 90px;
+
+    height: 90px;
+
+    border-radius: 50%;
+
+    z-index: 30;
+
+    background: #d93434;
+
+    font-size: 15px;
+}
+
+#cancelButton {
+    display: none;
+
+    position: fixed;
+
+    right: 30px;
+
+    bottom: 140px;
+
+    z-index: 30;
+}
+
+@media (
+    max-width: 700px
+) {
+
+    #joystick,
+    #interactButton {
+        display: block;
+    }
+
+    #controls {
+        display: none;
+    }
+
+    #menu {
+        width: 145px;
+    }
+
+    #menu button {
+        font-size: 10px;
+    }
+
 }
 
 </style>
@@ -313,131 +395,107 @@ h1 {
 
 <body>
 
-<!-- MAIN MENU -->
-
 <div
     id="mainMenu"
     class="screen"
 >
 
-    <div class="box">
+<div class="box">
 
-        <div class="logo">
-            ⛽
-        </div>
-
-        <h1>OCTANE</h1>
-
-        <p>
-            Run the gas station
-            together.
-        </p>
-
-        <input
-            id="nameInput"
-            maxlength="20"
-            placeholder="Your name"
-        >
-
-        <button
-            onclick="showCreate()"
-        >
-            CREATE GAME
-        </button>
-
-        <button
-            onclick="showJoin()"
-        >
-            JOIN GAME
-        </button>
-
-        <div id="error"></div>
-
-    </div>
-
+<div class="logo">
+⛽
 </div>
 
-<!-- CREATE GAME -->
+<h1>
+OCTANE
+</h1>
 
-<div
-    id="createScreen"
-    class="screen hidden"
+<p>
+Run the gas station together.
+</p>
+
+<input
+    id="nameInput"
+    maxlength="20"
+    placeholder="Your name"
 >
 
-    <div class="box">
+<button onclick="createGame()">
+CREATE GAME
+</button>
 
-        <h1>Game Created!</h1>
+<button onclick="showJoin()">
+JOIN GAME
+</button>
 
-        <p>
-            Give this code to
-            your friends:
-        </p>
-
-        <div id="roomCode">
-            ----
-        </div>
-
-        <div id="playersList">
-            Waiting for players...
-        </div>
-
-        <button
-            id="startButton"
-            onclick="startGame()"
-        >
-            START GAME
-        </button>
-
-        <button
-            onclick="location.reload()"
-        >
-            CANCEL
-        </button>
-
-    </div>
+<div id="error"></div>
 
 </div>
 
-<!-- JOIN GAME -->
+</div>
 
 <div
     id="joinScreen"
     class="screen hidden"
 >
 
-    <div class="box">
+<div class="box">
 
-        <h1>Join Game</h1>
+<h1>
+JOIN GAME
+</h1>
 
-        <input
-            id="joinCode"
-            maxlength="4"
-            placeholder="ROOM CODE"
-            style="
-                text-transform:
-                uppercase;
-                text-align:
-                center;
-                letter-spacing:
-                5px;
-            "
-        >
+<input
+    id="joinCode"
+    maxlength="4"
+    placeholder="ROOM CODE"
+>
 
-        <button
-            onclick="joinRoom()"
-        >
-            JOIN
-        </button>
+<button onclick="joinGame()">
+JOIN
+</button>
 
-        <button
-            onclick="showMain()"
-        >
-            BACK
-        </button>
+<button onclick="showMain()">
+BACK
+</button>
 
-        <div id="joinError"></div>
+<div id="joinError"></div>
 
-    </div>
+</div>
+
+</div>
+
+<div
+    id="lobbyScreen"
+    class="screen hidden"
+>
+
+<div class="box">
+
+<h1>
+⛽ OCTANE
+</h1>
+
+<p>
+Room Code:
+</p>
+
+<div id="roomCode">
+----
+</div>
+
+<div id="playersList">
+Waiting...
+</div>
+
+<button
+    id="startButton"
+    onclick="startGame()"
+>
+START GAME
+</button>
+
+</div>
 
 </div>
 
@@ -449,7 +507,8 @@ h1 {
     id="roomDisplay"
     class="hidden"
 >
-    ROOM: <span id="roomCodeHUD"></span>
+ROOM:
+<span id="roomCodeHUD"></span>
 </div>
 
 <div
@@ -457,58 +516,58 @@ h1 {
     class="hidden"
 >
 
-    <h2>
-        ⛽ OCTANE
-    </h2>
+<h2>
+⛽ OCTANE
+</h2>
 
-    <div class="stat">
-        💰 $
-        <span id="money">
-            100
-        </span>
-    </div>
+<div>
+💰 $
+<span id="money">
+100
+</span>
+</div>
 
-    <div class="stat">
-        ⛽ Fuel:
-        <span id="fuel">
-            40/100
-        </span>
-    </div>
+<div>
+⛽ Fuel:
+<span id="fuel">
+40/100
+</span>
+</div>
 
-    <div class="stat">
-        📦 Store:
-        <span id="stock">
-            20/40
-        </span>
-    </div>
+<div>
+📦 Stock:
+<span id="stock">
+20/40
+</span>
+</div>
 
-    <div class="stat">
-        🧹 Clean:
-        <span id="clean">
-            100
-        </span>%
-    </div>
+<div>
+📦 Boxes:
+<span id="boxes">
+10
+</span>
+</div>
 
-    <div class="stat">
-        📅 Day:
-        <span id="day">
-            1
-        </span>
-    </div>
+<div>
+🧹 Clean:
+<span id="clean">
+100
+</span>%
+</div>
 
-    <div class="stat">
-        🕐
-        <span id="time">
-            08:00
-        </span>
-    </div>
+<div>
+📅 Day:
+<span id="day">
+1
+</span>
+</div>
 
-    <div class="stat">
-        👥
-        <span id="players">
-            0/4
-        </span>
-    </div>
+<div>
+🕐
+<span id="time">
+08:00
+</span>
+</div>
 
 </div>
 
@@ -517,73 +576,74 @@ h1 {
     class="hidden"
 >
 
-    <h3>
-        Hire Employee
-    </h3>
+<b>
+Hire Helpers
+</b>
 
-    <button
-        onclick="hireBot('fuel')"
-    >
-        ⛽ Pump Worker $50
-    </button>
+<button onclick="hireBot('fuel')">
+⛽ Fuel Worker $50
+</button>
 
-    <button
-        onclick="hireBot('cashier')"
-    >
-        💵 Cashier $50
-    </button>
+<button onclick="hireBot('cashier')">
+💵 Cashier $50
+</button>
 
-    <button
-        onclick="hireBot('restocker')"
-    >
-        📦 Restocker $50
-    </button>
+<button onclick="hireBot('restocker')">
+📦 Restocker $50
+</button>
 
-    <button
-        onclick="hireBot('cleaner')"
-    >
-        🧹 Cleaner $50
-    </button>
+<button onclick="hireBot('cleaner')">
+🧹 Cleaner $50
+</button>
 
-    <h3>
-        Upgrades
-    </h3>
+<hr>
 
-    <button
-        onclick="upgrade('pump')"
-    >
-        ⛽ Add Pump $250
-    </button>
+<b>
+Upgrades
+</b>
 
-    <button
-        onclick="upgrade('shelves')"
-    >
-        🛒 Bigger Store $200
-    </button>
+<button onclick="upgrade('pump')">
+⛽ Pump $250
+</button>
 
-    <button
-        onclick="upgrade('employees')"
-    >
-        👷 More Employees $300
-    </button>
+<button onclick="upgrade('shelves')">
+🛒 Shelves $200
+</button>
+
+<button onclick="upgrade('employees')">
+👷 Employees $300
+</button>
 
 </div>
 
-<div
-    id="controls"
-    class="hidden"
+<div id="controls">
+WASD / Arrow Keys:
+Move
+<br>
+E:
+Work / Interact
+<br>
+Space:
+Cancel task
+</div>
+
+<div id="joystick">
+
+<div id="stick"></div>
+
+</div>
+
+<button
+    id="interactButton"
 >
+INTERACT
+</button>
 
-    <b>WASD</b> /
-    Arrow Keys:
-    Move
-
-    <br>
-
-    <b>E:</b>
-    Interact
-
-</div>
+<button
+    id="cancelButton"
+>
+CANCEL
+</button>
 
 <script>
 
@@ -609,62 +669,43 @@ const ctx =
     );
 
 const WORLD = {
-
     width: 1400,
-
     height: 800
-
 };
 
 let state = {
-
     players: {},
-
     bots: {},
-
     customers: {},
-
+    tasks: [],
     upgrades: {
         pumps: 2
     }
-
 };
 
 let myId = null;
 
-let roomCode = null;
+let roomCode = "";
 
-let isHost = false;
-
-let lastFrame = 0;
+let camera = {
+    x: 0,
+    y: 0
+};
 
 const keys = {};
 
-const camera = {
-
-    x: 0,
-
-    y: 0
-
-};
-
-function hideAllScreens() {
+function showMain() {
 
     document
         .querySelectorAll(
             ".screen"
         )
         .forEach(
-            screen =>
-                screen.classList.add(
+            s =>
+                s.classList.add(
                     "hidden"
                 )
         );
-}
-
-function showMain() {
-
-    hideAllScreens();
 
     document
         .getElementById(
@@ -675,57 +716,18 @@ function showMain() {
         );
 }
 
-function showCreate() {
-
-    const name =
-        document
-        .getElementById(
-            "nameInput"
-        )
-        .value
-        .trim();
-
-    if (!name) {
-
-        document
-            .getElementById(
-                "error"
-            )
-            .textContent =
-                "Enter your name.";
-
-        return;
-    }
-
-    socket.emit(
-        "createRoom",
-        name
-    );
-}
-
 function showJoin() {
 
-    const name =
-        document
-        .getElementById(
-            "nameInput"
+    document
+        .querySelectorAll(
+            ".screen"
         )
-        .value
-        .trim();
-
-    if (!name) {
-
-        document
-            .getElementById(
-                "error"
-            )
-            .textContent =
-                "Enter your name first.";
-
-        return;
-    }
-
-    hideAllScreens();
+        .forEach(
+            s =>
+                s.classList.add(
+                    "hidden"
+                )
+        );
 
     document
         .getElementById(
@@ -736,38 +738,52 @@ function showJoin() {
         );
 }
 
-function joinRoom() {
+function createGame() {
 
     const name =
         document
-        .getElementById(
-            "nameInput"
-        )
-        .value
-        .trim();
+            .getElementById(
+                "nameInput"
+            )
+            .value
+            .trim();
 
-    const code =
-        document
-        .getElementById(
-            "joinCode"
-        )
-        .value
-        .trim()
-        .toUpperCase();
-
-    if (
-        code.length !== 4
-    ) {
+    if (!name) {
 
         document
             .getElementById(
-                "joinError"
+                "error"
             )
             .textContent =
-                "Enter a 4-character room code.";
+            "Enter your name.";
 
         return;
     }
+
+    socket.emit(
+        "createRoom",
+        name
+    );
+}
+
+function joinGame() {
+
+    const name =
+        document
+            .getElementById(
+                "nameInput"
+            )
+            .value
+            .trim();
+
+    const code =
+        document
+            .getElementById(
+                "joinCode"
+            )
+            .value
+            .trim()
+            .toUpperCase();
 
     socket.emit(
         "joinRoom",
@@ -788,10 +804,6 @@ socket.on(
         roomCode =
             data.roomCode;
 
-        isHost =
-            data.hostId ===
-            myId;
-
         document
             .getElementById(
                 "roomCode"
@@ -805,21 +817,6 @@ socket.on(
             )
             .textContent =
             roomCode;
-
-        hideAllScreens();
-
-        if (
-            !state.started
-        ) {
-
-            document
-                .getElementById(
-                    "createScreen"
-                )
-                .classList.remove(
-                    "hidden"
-                );
-        }
     }
 );
 
@@ -843,65 +840,74 @@ socket.on(
         state =
             newState;
 
-        roomCode =
-            state.roomCode;
-
-        isHost =
-            state.hostId ===
-            myId;
-
         updateHUD();
 
-        updateLobby();
-
         if (
-            state.started
+            !state.started
         ) {
 
-            hideAllScreens();
+            document
+                .querySelectorAll(
+                    ".screen"
+                )
+                .forEach(
+                    s =>
+                        s.classList.add(
+                            "hidden"
+                        )
+                );
 
             document
                 .getElementById(
-                    "hud"
+                    "lobbyScreen"
                 )
                 .classList.remove(
                     "hidden"
                 );
 
-            document
-                .getElementById(
-                    "menu"
-                )
-                .classList.remove(
-                    "hidden"
-                );
+            updateLobby();
 
-            document
-                .getElementById(
-                    "controls"
-                )
-                .classList.remove(
-                    "hidden"
-                );
-
-            document
-                .getElementById(
-                    "roomDisplay"
-                )
-                .classList.remove(
-                    "hidden"
-                );
+            return;
         }
+
+        document
+            .querySelectorAll(
+                ".screen"
+            )
+            .forEach(
+                s =>
+                    s.classList.add(
+                        "hidden"
+                    )
+            );
+
+        document
+            .getElementById(
+                "hud"
+            )
+            .classList.remove(
+                "hidden"
+            );
+
+        document
+            .getElementById(
+                "menu"
+            )
+            .classList.remove(
+                "hidden"
+            );
+
+        document
+            .getElementById(
+                "roomDisplay"
+            )
+            .classList.remove(
+                "hidden"
+            );
     }
 );
 
 function updateLobby() {
-
-    if (
-        state.started
-    ) {
-        return;
-    }
 
     const list =
         document
@@ -909,34 +915,20 @@ function updateLobby() {
                 "playersList"
             );
 
-    const players =
-        Object.values(
-            state.players ||
-            {}
-        );
-
     list.innerHTML =
-        players
-            .map(
-                player =>
-                    `👤 ${escapeHTML(
-                        player.name
-                    )}`
-            )
-            .join(
-                "<br>"
-            );
-
-    const startButton =
-        document
-            .getElementById(
-                "startButton"
-            );
-
-    startButton.style.display =
-        isHost
-            ? "inline-block"
-            : "none";
+        Object.values(
+            state.players || {}
+        )
+        .map(
+            p =>
+                "👤 " +
+                escapeHTML(
+                    p.name
+                )
+        )
+        .join(
+            "<br>"
+        );
 }
 
 function escapeHTML(
@@ -956,14 +948,9 @@ function escapeHTML(
 
 function startGame() {
 
-    if (
-        isHost
-    ) {
-
-        socket.emit(
-            "startGame"
-        );
-    }
+    socket.emit(
+        "startGame"
+    );
 }
 
 function hireBot(
@@ -1000,14 +987,25 @@ function updateHUD() {
             "fuel"
         )
         .textContent =
-        `${state.fuel}/${state.maxFuel}`;
+        state.fuel +
+        "/" +
+        state.maxFuel;
 
     document
         .getElementById(
             "stock"
         )
         .textContent =
-        `${state.storeStock}/${state.maxStoreStock}`;
+        state.storeStock +
+        "/" +
+        state.maxStoreStock;
+
+    document
+        .getElementById(
+            "boxes"
+        )
+        .textContent =
+        state.boxes;
 
     document
         .getElementById(
@@ -1029,13 +1027,6 @@ function updateHUD() {
         )
         .textContent =
         state.time;
-
-    document
-        .getElementById(
-            "players"
-        )
-        .textContent =
-        `${state.playerCount}/${state.maxPlayers}`;
 }
 
 window.addEventListener(
@@ -1045,8 +1036,7 @@ window.addEventListener(
         const key =
             event.key.toLowerCase();
 
-        keys[key] =
-            true;
+        keys[key] = true;
 
         if (
             key === "e" &&
@@ -1055,6 +1045,15 @@ window.addEventListener(
 
             socket.emit(
                 "interact"
+            );
+        }
+
+        if (
+            key === " "
+        ) {
+
+            socket.emit(
+                "cancelTask"
             );
         }
     }
@@ -1066,8 +1065,7 @@ window.addEventListener(
 
         keys[
             event.key.toLowerCase()
-        ] =
-            false;
+        ] = false;
     }
 );
 
@@ -1077,7 +1075,6 @@ setInterval(
         socket.emit(
             "move",
             {
-
                 up:
                     keys.w ||
                     keys.arrowup,
@@ -1093,7 +1090,6 @@ setInterval(
                 right:
                     keys.d ||
                     keys.arrowright
-
             }
         );
 
@@ -1101,7 +1097,174 @@ setInterval(
     66
 );
 
-function resizeCanvas() {
+document
+    .getElementById(
+        "interactButton"
+    )
+    .addEventListener(
+        "touchstart",
+        event => {
+
+            event.preventDefault();
+
+            socket.emit(
+                "interact"
+            );
+        }
+    );
+
+document
+    .getElementById(
+        "cancelButton"
+    )
+    .addEventListener(
+        "touchstart",
+        event => {
+
+            event.preventDefault();
+
+            socket.emit(
+                "cancelTask"
+            );
+        }
+    );
+
+const joystick =
+    document.getElementById(
+        "joystick"
+    );
+
+const stick =
+    document.getElementById(
+        "stick"
+    );
+
+let joystickActive = false;
+
+let joystickX = 0;
+
+let joystickY = 0;
+
+joystick.addEventListener(
+    "touchstart",
+    event => {
+
+        event.preventDefault();
+
+        joystickActive = true;
+    }
+);
+
+joystick.addEventListener(
+    "touchmove",
+    event => {
+
+        if (
+            !joystickActive
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const touch =
+            event.touches[0];
+
+        const rect =
+            joystick.getBoundingClientRect();
+
+        let x =
+            touch.clientX -
+            (
+                rect.left +
+                rect.width / 2
+            );
+
+        let y =
+            touch.clientY -
+            (
+                rect.top +
+                rect.height / 2
+            );
+
+        const length =
+            Math.hypot(
+                x,
+                y
+            );
+
+        if (
+            length > 40
+        ) {
+
+            x =
+                x / length * 40;
+
+            y =
+                y / length * 40;
+        }
+
+        joystickX =
+            x / 40;
+
+        joystickY =
+            y / 40;
+
+        stick.style.transform =
+            `translate(${x}px, ${y}px)`;
+    }
+);
+
+joystick.addEventListener(
+    "touchend",
+    () => {
+
+        joystickActive = false;
+
+        joystickX = 0;
+
+        joystickY = 0;
+
+        stick.style.transform =
+            "translate(0, 0)";
+    }
+);
+
+setInterval(
+    () => {
+
+        if (
+            Math.abs(
+                joystickX
+            ) > 0.1 ||
+            Math.abs(
+                joystickY
+            ) > 0.1
+        ) {
+
+            socket.emit(
+                "move",
+                {
+                    up:
+                        joystickY < -0.2,
+
+                    down:
+                        joystickY > 0.2,
+
+                    left:
+                        joystickX < -0.2,
+
+                    right:
+                        joystickX > 0.2
+                }
+            );
+        }
+
+    },
+    66
+);
+
+function resize() {
 
     canvas.width =
         window.innerWidth;
@@ -1112,10 +1275,10 @@ function resizeCanvas() {
 
 window.addEventListener(
     "resize",
-    resizeCanvas
+    resize
 );
 
-resizeCanvas();
+resize();
 
 function updateCamera() {
 
@@ -1157,39 +1320,7 @@ function updateCamera() {
         );
 }
 
-function drawWorld() {
-
-    ctx.fillStyle =
-        "#5d8f55";
-
-    ctx.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    // Road
-
-    ctx.fillStyle =
-        "#444";
-
-    ctx.fillRect(
-        -camera.x,
-        -camera.y,
-        WORLD.width,
-        130
-    );
-
-    ctx.fillRect(
-        -camera.x,
-        650 -
-        camera.y,
-        WORLD.width,
-        150
-    );
-
-    // Building
+function drawBuilding() {
 
     ctx.fillStyle =
         "#ddd";
@@ -1202,8 +1333,6 @@ function drawWorld() {
         550,
         430
     );
-
-    // Roof
 
     ctx.fillStyle =
         "#d93434";
@@ -1230,7 +1359,7 @@ function drawWorld() {
         "OCTANE",
         625 -
         camera.x,
-        213 -
+        212 -
         camera.y
     );
 
@@ -1277,12 +1406,17 @@ function drawWorld() {
         i++
     ) {
 
-        const pump =
-            getPump(i);
+        const pumpX =
+            [
+                980,
+                1120,
+                1260,
+                1330
+            ][i];
 
         drawBox(
-            pump.x - 30,
-            pump.y - 50,
+            pumpX - 30,
+            180,
             60,
             100,
             "#333",
@@ -1291,44 +1425,13 @@ function drawWorld() {
     }
 }
 
-function getPump(
-    index
-) {
-
-    const pumps = [
-
-        {
-            x: 980,
-            y: 230
-        },
-
-        {
-            x: 1120,
-            y: 230
-        },
-
-        {
-            x: 1260,
-            y: 230
-        },
-
-        {
-            x: 1330,
-            y: 230
-        }
-
-    ];
-
-    return pumps[index];
-}
-
 function drawBox(
     x,
     y,
     width,
     height,
     color,
-    text
+    label
 ) {
 
     ctx.fillStyle =
@@ -1347,13 +1450,13 @@ function drawBox(
         "#fff";
 
     ctx.font =
-        "13px Arial";
+        "12px Arial";
 
     ctx.textAlign =
         "center";
 
     ctx.fillText(
-        text,
+        label,
         x +
         width / 2 -
         camera.x,
@@ -1396,7 +1499,7 @@ function drawEntity(
         "#fff";
 
     ctx.font =
-        "11px Arial";
+        "10px Arial";
 
     ctx.textAlign =
         "center";
@@ -1404,35 +1507,155 @@ function drawEntity(
     ctx.fillText(
         label,
         x,
-        y - 19
+        y - 20
     );
-}
 
-function drawPlayers() {
-
-    for (
-        const player of
-        Object.values(
-            state.players ||
-            {}
-        )
+    if (
+        entity.task
     ) {
 
-        drawEntity(
-            player,
-            player.color,
-            player.name
+        ctx.fillText(
+            "●",
+            x,
+            y + 28
+        );
+    }
+
+    if (
+        entity.carrying
+    ) {
+
+        ctx.fillText(
+            "📦",
+            x,
+            y + 35
         );
     }
 }
 
-function drawBots() {
+function drawCustomer(
+    customer
+) {
+
+    let color =
+        "#f5a623";
+
+    if (
+        customer.state ===
+        "leaving"
+    ) {
+
+        color =
+            "#777";
+    }
+
+    drawEntity(
+        customer,
+        color,
+        "Customer"
+    );
+}
+
+function drawTask(
+    task
+) {
+
+    if (
+        task.type !==
+        "clean"
+    ) {
+        return;
+    }
+
+    ctx.fillStyle =
+        "#8b4513";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        task.x -
+        camera.x,
+        task.y -
+        camera.y,
+        12,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.fillStyle =
+        "#fff";
+
+    ctx.font =
+        "10px Arial";
+
+    ctx.fillText(
+        "CLEAN",
+        task.x -
+        camera.x,
+        task.y -
+        camera.y -
+        18
+    );
+}
+
+function render() {
+
+    ctx.fillStyle =
+        "#619b5c";
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    ctx.fillStyle =
+        "#444";
+
+    ctx.fillRect(
+        -camera.x,
+        -camera.y,
+        WORLD.width,
+        130
+    );
+
+    ctx.fillRect(
+        -camera.x,
+        650 -
+        camera.y,
+        WORLD.width,
+        150
+    );
+
+    drawBuilding();
+
+    for (
+        const task of
+        state.tasks || []
+    ) {
+
+        drawTask(task);
+    }
+
+    for (
+        const customer of
+        Object.values(
+            state.customers || {}
+        )
+    ) {
+
+        drawCustomer(
+            customer
+        );
+    }
 
     for (
         const bot of
         Object.values(
-            state.bots ||
-            {}
+            state.bots || {}
         )
     ) {
 
@@ -1442,74 +1665,22 @@ function drawBots() {
             "BOT"
         );
     }
-}
-
-function drawCustomers() {
 
     for (
-        const customer of
+        const player of
         Object.values(
-            state.customers ||
-            {}
+            state.players || {}
         )
     ) {
 
-        let color =
-            "#f5a623";
-
-        if (
-            customer.state ===
-            "leaving"
-        ) {
-
-            color =
-                "#777";
-        }
-
         drawEntity(
-            customer,
-            color,
-            "Customer"
+            player,
+            player.color,
+            player.name
         );
     }
-}
-
-function render(
-    timestamp
-) {
-
-    if (
-        timestamp -
-        lastFrame <
-        33
-    ) {
-
-        requestAnimationFrame(
-            render
-        );
-
-        return;
-    }
-
-    lastFrame =
-        timestamp;
 
     updateCamera();
-
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    drawWorld();
-
-    drawCustomers();
-
-    drawBots();
-
-    drawPlayers();
 
     requestAnimationFrame(
         render
