@@ -15,13 +15,10 @@
 
 <title>Octane</title>
 
-<script src="/socket.io/socket.io.js"></script>
-
 <style>
 
 * {
     box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -45,6 +42,8 @@ body {
         Arial,
         sans-serif;
 
+    touch-action: none;
+
 }
 
 button,
@@ -59,43 +58,6 @@ input {
 button {
 
     cursor: pointer;
-
-    border: none;
-
-    border-radius: 8px;
-
-    padding:
-        10px 15px;
-
-    background: #e63946;
-
-    color: white;
-
-    font-weight: bold;
-
-}
-
-button:active {
-
-    transform:
-        scale(0.96);
-
-}
-
-input {
-
-    padding:
-        11px;
-
-    border-radius: 7px;
-
-    border: 1px solid #555;
-
-    background: #222;
-
-    color: white;
-
-    width: 100%;
 
 }
 
@@ -112,37 +74,40 @@ input {
 
     display: flex;
 
-    justify-content: center;
-
     align-items: center;
+
+    justify-content: center;
 
     background:
         linear-gradient(
             135deg,
             #111,
-            #242424
+            #1b1b1b
         );
 
-    z-index: 100;
+    z-index: 10;
 
 }
 
+
 .menuBox {
 
-    width:
-        min(
-            92vw,
-            420px
-        );
+    width: min(
+        90vw,
+        420px
+    );
 
-    padding:
-        25px;
+    padding: 30px;
 
-    border-radius:
-        15px;
+    background: #222;
 
-    background:
-        #1b1b1b;
+    border:
+        1px solid
+        #444;
+
+    border-radius: 14px;
+
+    text-align: center;
 
     box-shadow:
         0 10px 40px
@@ -153,67 +118,114 @@ input {
             0.5
         );
 
-    text-align:
-        center;
-
 }
+
 
 .logo {
 
-    font-size:
-        48px;
+    font-size: 48px;
 
-    font-weight:
-        900;
+    font-weight: bold;
 
-    letter-spacing:
-        3px;
+    letter-spacing: 3px;
 
-    color:
-        #ffb703;
-
-    margin-bottom:
-        5px;
+    margin-bottom: 5px;
 
 }
+
 
 .subtitle {
 
-    color:
-        #aaa;
+    color: #aaa;
 
-    margin-bottom:
-        25px;
+    margin-bottom: 25px;
 
 }
 
-.menuSection {
 
-    margin-top:
-        15px;
+input {
+
+    width: 100%;
+
+    padding: 13px;
+
+    margin-bottom: 10px;
+
+    border: none;
+
+    border-radius: 7px;
+
+    background: #333;
+
+    color: white;
+
+    font-size: 16px;
+
+    outline: none;
 
 }
 
-.menuSection button {
 
-    width:
-        100%;
+.menuButton {
 
-    margin-top:
-        8px;
+    width: 100%;
+
+    padding: 13px;
+
+    margin-top: 8px;
+
+    border: none;
+
+    border-radius: 7px;
+
+    background: #e63946;
+
+    color: white;
+
+    font-size: 16px;
+
+    font-weight: bold;
 
 }
 
-#error {
 
-    color:
-        #ff6b6b;
+.menuButton:hover {
 
-    min-height:
-        20px;
+    filter:
+        brightness(1.15);
 
-    margin-top:
-        10px;
+}
+
+
+#roomCodeDisplay {
+
+    margin-top: 20px;
+
+    padding: 15px;
+
+    background: #333;
+
+    border-radius: 8px;
+
+    display: none;
+
+}
+
+
+#roomCode {
+
+    font-size: 32px;
+
+    font-weight: bold;
+
+    letter-spacing: 5px;
+
+}
+
+
+#startButton {
+
+    display: none;
 
 }
 
@@ -224,39 +236,22 @@ input {
 
 #game {
 
-    display:
-        none;
+    display: none;
 
-    position:
-        fixed;
+    position: fixed;
 
-    inset:
-        0;
-
-    background:
-        #101010;
+    inset: 0;
 
 }
 
 
-/*
-Canvas is deliberately displayed
-at a scaled resolution.
+#gameCanvas {
 
-The actual internal canvas is only
-960 x 540, reducing GPU work.
-*/
+    position: absolute;
 
-#canvas {
+    left: 50%;
 
-    position:
-        absolute;
-
-    left:
-        50%;
-
-    top:
-        50%;
+    top: 50%;
 
     transform:
         translate(
@@ -264,17 +259,10 @@ The actual internal canvas is only
             -50%
         );
 
-    width:
-        100vw;
-
-    height:
-        100vh;
-
-    object-fit:
-        contain;
+    background: #78a85a;
 
     image-rendering:
-        auto;
+        pixelated;
 
 }
 
@@ -285,49 +273,28 @@ The actual internal canvas is only
 
 #hud {
 
-    position:
-        fixed;
+    position: fixed;
 
-    top:
-        10px;
+    top: 10px;
 
-    left:
-        10px;
+    left: 10px;
 
-    right:
-        10px;
+    right: 10px;
 
-    display:
-        flex;
+    display: flex;
 
-    justify-content:
-        space-between;
+    justify-content: space-between;
 
-    pointer-events:
-        none;
+    align-items: flex-start;
 
-    z-index:
-        10;
+    pointer-events: none;
+
+    z-index: 2;
 
 }
 
-.stats {
 
-    display:
-        flex;
-
-    flex-wrap:
-        wrap;
-
-    gap:
-        6px;
-
-    max-width:
-        75%;
-
-}
-
-.stat {
+.hudPanel {
 
     background:
         rgba(
@@ -337,96 +304,127 @@ The actual internal canvas is only
             0.75
         );
 
-    padding:
-        7px 10px;
+    border-radius: 8px;
 
-    border-radius:
-        7px;
+    padding: 9px 12px;
 
-    font-size:
-        13px;
+    font-size: 14px;
 
 }
 
-#roomLabel {
+
+#stats {
+
+    line-height: 1.6;
+
+}
+
+
+#actions {
+
+    pointer-events: auto;
+
+    display: flex;
+
+    gap: 6px;
+
+    flex-wrap: wrap;
+
+    justify-content: flex-end;
+
+}
+
+
+.actionButton {
+
+    border: none;
+
+    border-radius: 6px;
+
+    padding:
+        8px
+        10px;
+
+    background: #333;
+
+    color: white;
+
+    font-weight: bold;
+
+}
+
+
+.actionButton:hover {
+
+    background: #444;
+
+}
+
+
+/* =====================================================
+   TASK MESSAGE
+===================================================== */
+
+#taskMessage {
+
+    position: fixed;
+
+    left: 50%;
+
+    bottom: 25px;
+
+    transform:
+        translateX(-50%);
+
+    padding:
+        10px
+        16px;
 
     background:
         rgba(
             0,
             0,
             0,
-            0.75
+            0.8
         );
 
-    padding:
-        7px 10px;
+    border-radius: 8px;
 
-    border-radius:
-        7px;
+    font-size: 14px;
 
-    font-size:
-        13px;
+    pointer-events: none;
 
-}
+    z-index: 3;
 
-
-/* =====================================================
-   BOTTOM CONTROLS
-===================================================== */
-
-#bottomUI {
-
-    position:
-        fixed;
-
-    bottom:
-        15px;
-
-    left:
-        15px;
-
-    right:
-        15px;
-
-    display:
-        flex;
-
-    justify-content:
-        space-between;
-
-    align-items:
-        flex-end;
-
-    pointer-events:
-        none;
-
-    z-index:
-        20;
-
-}
-
-#bottomUI > * {
-
-    pointer-events:
-        auto;
+    text-align: center;
 
 }
 
 
 /* =====================================================
-   JOYSTICK
+   CONTROLS
 ===================================================== */
+
+#controls {
+
+    position: fixed;
+
+    bottom: 15px;
+
+    left: 15px;
+
+    z-index: 4;
+
+}
+
 
 #joystick {
 
-    width:
-        120px;
+    width: 130px;
 
-    height:
-        120px;
+    height: 130px;
 
-    border-radius:
-        50%;
+    border-radius: 50%;
 
     background:
         rgba(
@@ -442,210 +440,122 @@ The actual internal canvas is only
             255,
             255,
             255,
-            0.25
+            0.2
         );
 
-    position:
-        relative;
-
-    touch-action:
-        none;
+    position: relative;
 
 }
+
 
 #joystickKnob {
 
-    position:
-        absolute;
+    position: absolute;
 
-    width:
-        50px;
+    width: 50px;
 
-    height:
-        50px;
+    height: 50px;
 
-    border-radius:
-        50%;
+    left: 40px;
 
-    background:
-        rgba(
-            255,
-            255,
-            255,
-            0.55
-        );
+    top: 40px;
 
-    left:
-        35px;
-
-    top:
-        35px;
-
-}
-
-
-/* =====================================================
-   ACTION BUTTONS
-===================================================== */
-
-#actions {
-
-    display:
-        flex;
-
-    gap:
-        10px;
-
-}
-
-.actionButton {
-
-    width:
-        70px;
-
-    height:
-        70px;
-
-    border-radius:
-        50%;
-
-    background:
-        #e63946;
-
-    font-size:
-        13px;
-
-    touch-action:
-        manipulation;
-
-}
-
-
-/* =====================================================
-   SIDE PANEL
-===================================================== */
-
-#panel {
-
-    position:
-        fixed;
-
-    right:
-        10px;
-
-    top:
-        60px;
-
-    width:
-        min(
-            230px,
-            75vw
-        );
-
-    max-height:
-        70vh;
-
-    overflow-y:
-        auto;
+    border-radius: 50%;
 
     background:
         rgba(
-            15,
-            15,
-            15,
-            0.95
+            255,
+            255,
+            255,
+            0.35
         );
 
-    border-radius:
-        10px;
-
-    padding:
-        12px;
-
-    display:
-        none;
-
-    z-index:
-        30;
-
 }
 
-#panel h3 {
 
-    margin-top:
-        0;
+#actButton {
 
-}
+    position: fixed;
 
-.panelButton {
+    right: 25px;
 
-    width:
-        100%;
+    bottom: 30px;
 
-    margin-top:
-        7px;
+    width: 80px;
 
-    background:
-        #333;
+    height: 80px;
 
-}
+    border-radius: 50%;
 
-.closeButton {
+    border: none;
 
-    background:
-        #555;
+    background: #e63946;
+
+    color: white;
+
+    font-size: 18px;
+
+    font-weight: bold;
+
+    z-index: 4;
 
 }
 
 
-/* =====================================================
-   START BUTTON
-===================================================== */
-
-#startGameButton {
-
-    display:
-        none;
-
-    position:
-        fixed;
-
-    top:
-        50%;
-
-    left:
-        50%;
+#actButton:active {
 
     transform:
-        translate(
-            -50%,
-            -50%
-        );
-
-    z-index:
-        50;
-
-    font-size:
-        18px;
-
-    padding:
-        15px 30px;
+        scale(0.94);
 
 }
 
 
 /* =====================================================
-   DESKTOP
+   MOBILE
 ===================================================== */
 
 @media (
-    min-width: 700px
+    max-width: 600px
 ) {
 
-    #joystick {
+    .logo {
 
-        display:
-            none;
+        font-size: 38px;
+
+    }
+
+
+    #hud {
+
+        font-size: 11px;
+
+    }
+
+
+    .hudPanel {
+
+        padding:
+            6px
+            8px;
+
+    }
+
+
+    #actions {
+
+        max-width:
+            180px;
+
+    }
+
+
+    .actionButton {
+
+        font-size: 11px;
+
+        padding:
+            6px
+            7px;
 
     }
 
@@ -655,229 +565,204 @@ The actual internal canvas is only
 
 </head>
 
-
 <body>
 
 
-<!-- ===================================================
+<!-- =================================================
      MENU
-=================================================== -->
+================================================= -->
 
 <div id="menu">
 
-<div class="menuBox">
+    <div class="menuBox">
 
-<div class="logo">
-OCTANE
+        <div class="logo">
+            OCTANE
+        </div>
+
+        <div class="subtitle">
+            Run the station. Together.
+        </div>
+
+
+        <input
+            id="nameInput"
+            placeholder="Your name"
+            maxlength="20"
+        >
+
+
+        <button
+            class="menuButton"
+            id="createButton"
+        >
+            Create Station
+        </button>
+
+
+        <div style="
+            margin: 15px 0;
+            color: #777;
+        ">
+            OR
+        </div>
+
+
+        <input
+            id="roomInput"
+            placeholder="Room code"
+            maxlength="4"
+        >
+
+
+        <button
+            class="menuButton"
+            id="joinButton"
+        >
+            Join Station
+        </button>
+
+
+        <div id="roomCodeDisplay">
+
+            <div>
+                Your station code:
+            </div>
+
+            <div id="roomCode">
+                ----
+            </div>
+
+            <div style="
+                margin-top: 10px;
+                color: #aaa;
+                font-size: 13px;
+            ">
+                Give this code to your friends.
+            </div>
+
+        </div>
+
+
+        <button
+            class="menuButton"
+            id="startButton"
+        >
+            Start Shift
+        </button>
+
+
+        <div
+            id="menuMessage"
+            style="
+                margin-top: 15px;
+                color: #ff8888;
+                font-size: 14px;
+            "
+        ></div>
+
+    </div>
+
 </div>
 
-<div class="subtitle">
-Run the station. Make the money.
-</div>
 
-
-<div class="menuSection">
-
-<input
-    id="nameInput"
-    placeholder="Your name"
-    maxlength="20"
->
-
-
-<button
-    id="createButton"
->
-Create Private Room
-</button>
-
-</div>
-
-
-<div class="menuSection">
-
-<input
-    id="roomInput"
-    placeholder="Room code"
-    maxlength="4"
->
-
-<button
-    id="joinButton"
->
-Join Room
-</button>
-
-</div>
-
-
-<div id="error"></div>
-
-</div>
-
-</div>
-
-
-<!-- ===================================================
+<!-- =================================================
      GAME
-=================================================== -->
+================================================= -->
 
 <div id="game">
 
-
-<canvas
-    id="canvas"
-    width="960"
-    height="540"
-></canvas>
-
-
-<!-- HUD -->
-
-<div id="hud">
-
-<div class="stats">
-
-<div class="stat">
-💰 $<span id="money">100</span>
-</div>
-
-<div class="stat">
-⛽ <span id="fuel">50</span>
-</div>
-
-<div class="stat">
-📦 <span id="stock">20</span>
-</div>
-
-<div class="stat">
-🧹 <span id="clean">100</span>%
-</div>
-
-<div class="stat">
-📅 Day <span id="day">1</span>
-</div>
-
-</div>
-
-<div id="roomLabel">
-Room: ----
-</div>
-
-</div>
+    <canvas
+        id="gameCanvas"
+        width="960"
+        height="540"
+    ></canvas>
 
 
-<!-- START GAME -->
+    <!-- HUD -->
 
-<button
-    id="startGameButton"
->
-Start Shift
-</button>
+    <div id="hud">
+
+        <div
+            class="hudPanel"
+            id="stats"
+        >
+            Money: $100<br>
+            Fuel: 50<br>
+            Stock: 20<br>
+            Clean: 100%
+        </div>
 
 
-<!-- SIDE PANEL -->
+        <div
+            class="hudPanel"
+            id="actions"
+        >
 
-<div id="panel">
+            <button
+                class="actionButton"
+                id="hireButton"
+            >
+                Hire Employee ($50)
+            </button>
 
-<h3>
-Octane Menu
-</h3>
 
-<button
-    class="panelButton"
-    id="hireFuel"
->
-Hire Fuel Attendant - $50
-</button>
+            <button
+                class="actionButton"
+                id="pumpUpgrade"
+            >
+                Pump ($250)
+            </button>
 
-<button
-    class="panelButton"
-    id="hireCashier"
->
-Hire Cashier - $50
-</button>
 
-<button
-    class="panelButton"
-    id="hireRestocker"
->
-Hire Restocker - $50
-</button>
+            <button
+                class="actionButton"
+                id="shelfUpgrade"
+            >
+                Shelves ($200)
+            </button>
 
-<button
-    class="panelButton"
-    id="hireCleaner"
->
-Hire Cleaner - $50
-</button>
 
-<hr>
+            <button
+                class="actionButton"
+                id="employeeUpgrade"
+            >
+                Employee Slot ($300)
+            </button>
 
-<button
-    class="panelButton"
-    id="upgradePump"
->
-Add Pump - $250
-</button>
+        </div>
 
-<button
-    class="panelButton"
-    id="upgradeShelves"
->
-Expand Shelves - $200
-</button>
+    </div>
 
-<button
-    class="panelButton"
-    id="upgradeEmployees"
->
-Employee Slot - $300
-</button>
 
-<button
-    class="panelButton closeButton"
-    id="closePanel"
->
-Close
-</button>
+    <div id="taskMessage">
+        Walk around the station and press ACT near something that needs doing.
+    </div>
+
+
+    <!-- MOBILE CONTROLS -->
+
+    <div id="controls">
+
+        <div id="joystick">
+
+            <div id="joystickKnob"></div>
+
+        </div>
+
+    </div>
+
+
+    <button id="actButton">
+        ACT
+    </button>
 
 </div>
 
 
-<!-- BOTTOM UI -->
-
-<div id="bottomUI">
-
-
-<div id="joystick">
-
-<div id="joystickKnob"></div>
-
-</div>
-
-
-<div id="actions">
-
-<button
-    class="actionButton"
-    id="interactButton"
->
-ACT
-</button>
-
-<button
-    class="actionButton"
-    id="menuButton"
->
-MENU
-</button>
-
-</div>
-
-</div>
-
-</div>
+<script
+    src="/socket.io/socket.io.js"
+></script>
 
 
 <script>
@@ -891,64 +776,83 @@ const socket =
 
 
 /* =====================================================
-   CANVAS
+   ELEMENTS
 ===================================================== */
+
+const menu =
+    document.getElementById(
+        "menu"
+    );
+
+const game =
+    document.getElementById(
+        "game"
+    );
 
 const canvas =
     document.getElementById(
-        "canvas"
+        "gameCanvas"
     );
 
 const ctx =
     canvas.getContext(
-        "2d",
-        {
-            alpha: false
-        }
+        "2d"
     );
 
+const nameInput =
+    document.getElementById(
+        "nameInput"
+    );
 
-/*
-Disable smoothing for
-simple pixel-ish shapes.
-*/
+const roomInput =
+    document.getElementById(
+        "roomInput"
+    );
 
-ctx.imageSmoothingEnabled =
-    false;
+const roomCodeDisplay =
+    document.getElementById(
+        "roomCodeDisplay"
+    );
+
+const roomCode =
+    document.getElementById(
+        "roomCode"
+    );
+
+const startButton =
+    document.getElementById(
+        "startButton"
+    );
+
+const menuMessage =
+    document.getElementById(
+        "menuMessage"
+    );
+
+const stats =
+    document.getElementById(
+        "stats"
+    );
+
+const taskMessage =
+    document.getElementById(
+        "taskMessage"
+    );
 
 
 /* =====================================================
    GAME STATE
 ===================================================== */
 
-let state =
-    null;
-
 let myId =
     null;
 
-let roomCode =
+let currentRoom =
     null;
 
+let gameStarted =
+    false;
 
-/* =====================================================
-   LOCAL PLAYER
-===================================================== */
-
-const localPlayer = {
-
-    x:
-        420,
-
-    y:
-        520
-
-};
-
-
-/* =====================================================
-   INPUT
-===================================================== */
 
 const input = {
 
@@ -968,160 +872,1213 @@ const input = {
 
 
 /* =====================================================
-   KEYBOARD
+   CREATE ROOM
 ===================================================== */
 
-const keys = {};
-
-
-window.addEventListener(
-    "keydown",
-    e => {
-
-        keys[
-            e.key.toLowerCase()
-        ] = true;
-
-        updateKeyboard();
-
-    }
-);
-
-
-window.addEventListener(
-    "keyup",
-    e => {
-
-        keys[
-            e.key.toLowerCase()
-        ] = false;
-
-        updateKeyboard();
-
-    }
-);
-
-
-function updateKeyboard() {
-
-    input.up =
-        keys.w ||
-        keys.arrowup;
-
-    input.down =
-        keys.s ||
-        keys.arrowdown;
-
-    input.left =
-        keys.a ||
-        keys.arrowleft;
-
-    input.right =
-        keys.d ||
-        keys.arrowright;
-
-}
-
-
-/* =====================================================
-   SEND INPUT
-===================================================== */
-
-setInterval(
+document
+    .getElementById(
+        "createButton"
+    )
+    .onclick =
     () => {
 
+        const name =
+            nameInput.value
+                .trim();
+
+
         if (
-            !state
+            !name
         ) {
+
+            menuMessage.textContent =
+                "Enter your name first.";
 
             return;
 
         }
 
+
         socket.emit(
-            "input",
-            input
+            "createRoom",
+            name
         );
 
-    },
-    100
+    };
+
+
+/* =====================================================
+   JOIN ROOM
+===================================================== */
+
+document
+    .getElementById(
+        "joinButton"
+    )
+    .onclick =
+    () => {
+
+        const name =
+            nameInput.value
+                .trim();
+
+        const code =
+            roomInput.value
+                .trim()
+                .toUpperCase();
+
+
+        if (
+            !name
+        ) {
+
+            menuMessage.textContent =
+                "Enter your name first.";
+
+            return;
+
+        }
+
+
+        if (
+            code.length !== 4
+        ) {
+
+            menuMessage.textContent =
+                "Enter a 4-character room code.";
+
+            return;
+
+        }
+
+
+        socket.emit(
+            "joinRoom",
+            {
+
+                name,
+
+                code
+
+            }
+        );
+
+    };
+
+
+/* =====================================================
+   JOINED
+===================================================== */
+
+socket.on(
+    "joined",
+    data => {
+
+        myId =
+            data.playerId;
+
+
+        roomCode.textContent =
+            data.roomCode;
+
+
+        roomCodeDisplay.style.display =
+            "block";
+
+
+        startButton.style.display =
+            "block";
+
+
+        document
+            .getElementById(
+                "createButton"
+            )
+            .style.display =
+            "none";
+
+
+        document
+            .getElementById(
+                "joinButton"
+            )
+            .style.display =
+            "none";
+
+
+        nameInput.style.display =
+            "none";
+
+
+        roomInput.style.display =
+            "none";
+
+    }
 );
 
 
 /* =====================================================
-   LOCAL MOVEMENT PREDICTION
+   ERROR
 ===================================================== */
 
-function updateLocalMovement() {
+socket.on(
+    "errorMessage",
+    message => {
 
-    let dx = 0;
-
-    let dy = 0;
-
-    if (
-        input.up
-    ) {
-
-        dy--;
+        menuMessage.textContent =
+            message;
 
     }
+);
 
-    if (
-        input.down
-    ) {
 
-        dy++;
+/* =====================================================
+   START
+===================================================== */
+
+startButton.onclick =
+    () => {
+
+        socket.emit(
+            "startGame"
+        );
+
+    };
+
+
+/* =====================================================
+   STATE
+===================================================== */
+
+socket.on(
+    "state",
+    state => {
+
+        currentRoom =
+            state;
+
+
+        if (
+            state.started &&
+            !gameStarted
+        ) {
+
+            gameStarted =
+                true;
+
+            menu.style.display =
+                "none";
+
+            game.style.display =
+                "block";
+
+        }
+
+
+        updateHUD();
+
+        updateTaskMessage();
 
     }
+);
 
-    if (
-        input.left
-    ) {
 
-        dx--;
+/* =====================================================
+   INPUT
+===================================================== */
+
+function sendInput() {
+
+    socket.emit(
+        "input",
+        input
+    );
+
+}
+
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key ===
+            "w" ||
+            event.key ===
+            "ArrowUp"
+        ) {
+
+            input.up =
+                true;
+
+        }
+
+
+        if (
+            event.key ===
+            "s" ||
+            event.key ===
+            "ArrowDown"
+        ) {
+
+            input.down =
+                true;
+
+        }
+
+
+        if (
+            event.key ===
+            "a" ||
+            event.key ===
+            "ArrowLeft"
+        ) {
+
+            input.left =
+                true;
+
+        }
+
+
+        if (
+            event.key ===
+            "d" ||
+            event.key ===
+            "ArrowRight"
+        ) {
+
+            input.right =
+                true;
+
+        }
+
+
+        sendInput();
 
     }
+);
 
-    if (
-        input.right
-    ) {
 
-        dx++;
+document.addEventListener(
+    "keyup",
+    event => {
+
+        if (
+            event.key ===
+            "w" ||
+            event.key ===
+            "ArrowUp"
+        ) {
+
+            input.up =
+                false;
+
+        }
+
+
+        if (
+            event.key ===
+            "s" ||
+            event.key ===
+            "ArrowDown"
+        ) {
+
+            input.down =
+                false;
+
+        }
+
+
+        if (
+            event.key ===
+            "a" ||
+            event.key ===
+            "ArrowLeft"
+        ) {
+
+            input.left =
+                false;
+
+        }
+
+
+        if (
+            event.key ===
+            "d" ||
+            event.key ===
+            "ArrowRight"
+        ) {
+
+            input.right =
+                false;
+
+        }
+
+
+        sendInput();
 
     }
+);
+
+
+/* =====================================================
+   ACT
+===================================================== */
+
+function interact() {
+
+    socket.emit(
+        "interact"
+    );
+
+}
+
+
+document
+    .getElementById(
+        "actButton"
+    )
+    .onclick =
+    interact;
+
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key ===
+            "e" ||
+            event.key ===
+            " "
+        ) {
+
+            event.preventDefault();
+
+            interact();
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+   HIRE EMPLOYEE
+===================================================== */
+
+document
+    .getElementById(
+        "hireButton"
+    )
+    .onclick =
+    () => {
+
+        socket.emit(
+            "hireBot"
+        );
+
+    };
+
+
+/* =====================================================
+   UPGRADES
+===================================================== */
+
+document
+    .getElementById(
+        "pumpUpgrade"
+    )
+    .onclick =
+    () => {
+
+        socket.emit(
+            "upgrade",
+            "pump"
+        );
+
+    };
+
+
+document
+    .getElementById(
+        "shelfUpgrade"
+    )
+    .onclick =
+    () => {
+
+        socket.emit(
+            "upgrade",
+            "shelves"
+        );
+
+    };
+
+
+document
+    .getElementById(
+        "employeeUpgrade"
+    )
+    .onclick =
+    () => {
+
+        socket.emit(
+            "upgrade",
+            "employees"
+        );
+
+    };
+
+
+/* =====================================================
+   HUD
+===================================================== */
+
+function updateHUD() {
 
     if (
-        dx === 0 &&
-        dy === 0
+        !currentRoom
     ) {
 
         return;
 
     }
 
-    const length =
-        Math.sqrt(
-            dx * dx +
-            dy * dy
-        );
 
-    dx /=
-        length;
+    stats.innerHTML =
 
-    dy /=
-        length;
+        "Money: $" +
+        currentRoom.money +
 
-    localPlayer.x +=
-        dx * 3;
+        "<br>Fuel: " +
+        currentRoom.fuel +
+        "/" +
+        currentRoom.maxFuel +
 
-    localPlayer.y +=
-        dy * 3;
+        "<br>Stock: " +
+        currentRoom.stock +
+        "/" +
+        currentRoom.maxStock +
+
+        "<br>Clean: " +
+        currentRoom.cleanliness +
+        "%" +
+
+        "<br>Day: " +
+        currentRoom.day;
 
 }
 
 
 /* =====================================================
-   TOUCH JOYSTICK
+   TASK MESSAGE
+===================================================== */
+
+function updateTaskMessage() {
+
+    if (
+        !currentRoom
+    ) {
+
+        return;
+
+    }
+
+
+    const player =
+        currentRoom.players.find(
+            p =>
+                p.id ===
+                myId
+        );
+
+
+    if (
+        !player
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        player.task
+    ) {
+
+        const names = {
+
+            fuel:
+                "Fueling a customer...",
+
+            cashier:
+                "Running the register...",
+
+            restock:
+                "Restocking the shelves...",
+
+            clean:
+                "Cleaning the station...",
+
+            delivery:
+                "Refueling the station..."
+
+        };
+
+
+        taskMessage.textContent =
+            names[
+                player.task
+            ] ||
+            "Working...";
+
+
+        return;
+
+    }
+
+
+    taskMessage.textContent =
+        "Walk around the station and press ACT near something that needs doing.";
+
+}
+
+
+/* =====================================================
+   DRAWING
+===================================================== */
+
+function resizeCanvas() {
+
+    const scale =
+        Math.min(
+
+            window.innerWidth /
+                960,
+
+            window.innerHeight /
+                540
+
+        );
+
+
+    canvas.style.width =
+        960 *
+        scale +
+        "px";
+
+
+    canvas.style.height =
+        540 *
+        scale +
+        "px";
+
+}
+
+
+window.addEventListener(
+    "resize",
+    resizeCanvas
+);
+
+
+resizeCanvas();
+
+
+/* =====================================================
+   DRAW STATION
+===================================================== */
+
+function drawStation() {
+
+    ctx.fillStyle =
+        "#78a85a";
+
+    ctx.fillRect(
+        0,
+        0,
+        960,
+        540
+    );
+
+
+    /*
+    Building
+    */
+
+    ctx.fillStyle =
+        "#d8d8d8";
+
+    ctx.fillRect(
+        100,
+        80,
+        500,
+        400
+    );
+
+
+    /*
+    Interior
+    */
+
+    ctx.fillStyle =
+        "#eeeeee";
+
+    ctx.fillRect(
+        120,
+        100,
+        460,
+        360
+    );
+
+
+    /*
+    Register
+    */
+
+    drawStationObject(
+        330,
+        220,
+        80,
+        55,
+        "#8b5a2b",
+        "REGISTER"
+    );
+
+
+    /*
+    Shelves
+    */
+
+    drawStationObject(
+        500,
+        220,
+        80,
+        55,
+        "#6c757d",
+        "SHELVES"
+    );
+
+
+    /*
+    Storage
+    */
+
+    drawStationObject(
+        500,
+        430,
+        80,
+        55,
+        "#795548",
+        "STORAGE"
+    );
+
+
+    /*
+    Cleaning
+    */
+
+    drawStationObject(
+        270,
+        430,
+        80,
+        55,
+        "#219ebc",
+        "CLEAN"
+    );
+
+
+    /*
+    Delivery
+    */
+
+    drawStationObject(
+        720,
+        500,
+        100,
+        40,
+        "#495057",
+        "DELIVERY"
+    );
+
+
+    /*
+    Pumps
+    */
+
+    if (
+        currentRoom
+    ) {
+
+        for (
+            let i = 0;
+            i <
+            currentRoom
+                .upgrades
+                .pumps;
+            i++
+        ) {
+
+            const pump =
+                [
+                    {
+                        x: 700,
+                        y: 170
+                    },
+
+                    {
+                        x: 820,
+                        y: 170
+                    },
+
+                    {
+                        x: 700,
+                        y: 300
+                    },
+
+                    {
+                        x: 820,
+                        y: 300
+                    }
+
+                ][i];
+
+
+            drawStationObject(
+                pump.x,
+                pump.y,
+                55,
+                55,
+                "#343a40",
+                "PUMP"
+            );
+
+        }
+
+    }
+
+}
+
+
+function drawStationObject(
+    x,
+    y,
+    width,
+    height,
+    color,
+    label
+) {
+
+    ctx.fillStyle =
+        color;
+
+    ctx.fillRect(
+        x -
+            width /
+            2,
+
+        y -
+            height /
+            2,
+
+        width,
+        height
+    );
+
+
+    ctx.fillStyle =
+        "white";
+
+    ctx.font =
+        "10px Arial";
+
+    ctx.textAlign =
+        "center";
+
+    ctx.fillText(
+        label,
+        x,
+        y +
+            4
+    );
+
+}
+
+
+/* =====================================================
+   DRAW PLAYER
+===================================================== */
+
+function drawPlayer(
+    player
+) {
+
+    ctx.beginPath();
+
+    ctx.arc(
+        player.x,
+        player.y,
+        12,
+        0,
+        Math.PI *
+        2
+    );
+
+
+    ctx.fillStyle =
+        player.color;
+
+    ctx.fill();
+
+
+    ctx.strokeStyle =
+        "white";
+
+    ctx.stroke();
+
+
+    ctx.fillStyle =
+        "white";
+
+    ctx.font =
+        "11px Arial";
+
+    ctx.textAlign =
+        "center";
+
+    ctx.fillText(
+        player.name,
+        player.x,
+        player.y -
+            17
+    );
+
+
+    if (
+        player.task
+    ) {
+
+        ctx.font =
+            "9px Arial";
+
+        ctx.fillText(
+            player.task,
+            player.x,
+            player.y +
+                25
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   DRAW BOT
+===================================================== */
+
+function drawBot(
+    bot
+) {
+
+    ctx.beginPath();
+
+    ctx.arc(
+        bot.x,
+        bot.y,
+        11,
+        0,
+        Math.PI *
+        2
+    );
+
+
+    ctx.fillStyle =
+        "#9b5de5";
+
+    ctx.fill();
+
+
+    ctx.strokeStyle =
+        "white";
+
+    ctx.stroke();
+
+
+    ctx.fillStyle =
+        "white";
+
+    ctx.font =
+        "10px Arial";
+
+    ctx.textAlign =
+        "center";
+
+    ctx.fillText(
+        bot.name,
+        bot.x,
+        bot.y -
+            16
+    );
+
+
+    if (
+        bot.task
+    ) {
+
+        ctx.font =
+            "8px Arial";
+
+        ctx.fillText(
+            bot.task,
+            bot.x,
+            bot.y +
+                23
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   DRAW CUSTOMER
+===================================================== */
+
+function drawCustomer(
+    customer
+) {
+
+    ctx.beginPath();
+
+    ctx.arc(
+        customer.x,
+        customer.y,
+        9,
+        0,
+        Math.PI *
+        2
+    );
+
+
+    ctx.fillStyle =
+        customer.state ===
+        "leaving"
+
+            ? "#888"
+
+            : "#f1c40f";
+
+
+    ctx.fill();
+
+
+    ctx.strokeStyle =
+        "#222";
+
+    ctx.stroke();
+
+
+    if (
+        customer.state ===
+        "waitingFuel"
+    ) {
+
+        ctx.fillStyle =
+            "white";
+
+        ctx.font =
+            "9px Arial";
+
+        ctx.textAlign =
+            "center";
+
+        ctx.fillText(
+            "FUEL",
+            customer.x,
+            customer.y -
+                13
+        );
+
+    }
+
+
+    if (
+        customer.state ===
+        "waitingCheckout"
+    ) {
+
+        ctx.fillStyle =
+            "white";
+
+        ctx.font =
+            "9px Arial";
+
+        ctx.textAlign =
+            "center";
+
+        ctx.fillText(
+            "$",
+            customer.x,
+            customer.y -
+                13
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   DRAW TASK
+===================================================== */
+
+function drawTask(
+    task
+) {
+
+    ctx.fillStyle =
+        "#00ffff";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        task.x,
+        task.y,
+        7,
+        0,
+        Math.PI *
+        2
+    );
+
+    ctx.fill();
+
+
+    ctx.fillStyle =
+        "black";
+
+    ctx.font =
+        "9px Arial";
+
+    ctx.textAlign =
+        "center";
+
+    ctx.fillText(
+        "CLEAN",
+        task.x,
+        task.y +
+            3
+    );
+
+}
+
+
+/* =====================================================
+   RENDER
+===================================================== */
+
+function render() {
+
+    if (
+        !currentRoom
+    ) {
+
+        requestAnimationFrame(
+            render
+        );
+
+        return;
+
+    }
+
+
+    ctx.clearRect(
+        0,
+        0,
+        960,
+        540
+    );
+
+
+    drawStation();
+
+
+    /*
+    Cleaning tasks
+    */
+
+    for (
+        const task of
+        currentRoom.tasks
+    ) {
+
+        drawTask(
+            task
+        );
+
+    }
+
+
+    /*
+    Customers
+    */
+
+    for (
+        const customer of
+        currentRoom.customers
+    ) {
+
+        drawCustomer(
+            customer
+        );
+
+    }
+
+
+    /*
+    Players
+    */
+
+    for (
+        const player of
+        currentRoom.players
+    ) {
+
+        drawPlayer(
+            player
+        );
+
+    }
+
+
+    /*
+    Bots
+    */
+
+    for (
+        const bot of
+        currentRoom.bots
+    ) {
+
+        drawBot(
+            bot
+        );
+
+    }
+
+
+    requestAnimationFrame(
+        render
+    );
+
+}
+
+
+render();
+
+
+/* =====================================================
+   MOBILE JOYSTICK
 ===================================================== */
 
 const joystick =
@@ -1134,44 +2091,51 @@ const knob =
         "joystickKnob"
     );
 
+
 let joystickActive =
     false;
 
 
-function handleJoystick(
-    x,
-    y
+function updateJoystick(
+    event
 ) {
 
     const rect =
         joystick.getBoundingClientRect();
+
 
     const centerX =
         rect.left +
         rect.width /
         2;
 
+
     const centerY =
         rect.top +
         rect.height /
         2;
 
+
     let dx =
-        x -
+        event.clientX -
         centerX;
 
+
     let dy =
-        y -
+        event.clientY -
         centerY;
 
+
     const max =
-        35;
+        40;
+
 
     const length =
         Math.sqrt(
             dx * dx +
             dy * dy
         );
+
 
     if (
         length >
@@ -1190,54 +2154,49 @@ function handleJoystick(
 
     }
 
-    knob.style.left =
-        (
-            35 +
-            dx
-        ) +
-        "px";
 
-    knob.style.top =
-        (
-            35 +
-            dy
-        ) +
-        "px";
+    knob.style.transform =
+        `translate(${dx}px, ${dy}px)`;
 
 
     input.left =
         dx <
         -10;
 
+
     input.right =
         dx >
         10;
+
 
     input.up =
         dy <
         -10;
 
+
     input.down =
         dy >
         10;
+
+
+    sendInput();
 
 }
 
 
 joystick.addEventListener(
     "pointerdown",
-    e => {
+    event => {
 
         joystickActive =
             true;
 
         joystick.setPointerCapture(
-            e.pointerId
+            event.pointerId
         );
 
-        handleJoystick(
-            e.clientX,
-            e.clientY
+        updateJoystick(
+            event
         );
 
     }
@@ -1246,1132 +2205,67 @@ joystick.addEventListener(
 
 joystick.addEventListener(
     "pointermove",
-    e => {
+    event => {
 
         if (
-            !joystickActive
+            joystickActive
         ) {
 
-            return;
+            updateJoystick(
+                event
+            );
 
         }
 
-        handleJoystick(
-            e.clientX,
-            e.clientY
-        );
-
     }
 );
-
-
-function stopJoystick() {
-
-    joystickActive =
-        false;
-
-    input.up =
-        false;
-
-    input.down =
-        false;
-
-    input.left =
-        false;
-
-    input.right =
-        false;
-
-    knob.style.left =
-        "35px";
-
-    knob.style.top =
-        "35px";
-
-}
 
 
 joystick.addEventListener(
     "pointerup",
-    stopJoystick
-);
-
-joystick.addEventListener(
-    "pointercancel",
-    stopJoystick
-);
-
-
-/* =====================================================
-   INTERACT
-===================================================== */
-
-document
-    .getElementById(
-        "interactButton"
-    )
-    .addEventListener(
-        "click",
-        () => {
-
-            socket.emit(
-                "interact"
-            );
-
-        }
-    );
-
-
-/* =====================================================
-   MENU
-===================================================== */
-
-const menu =
-    document.getElementById(
-        "menu"
-    );
-
-const game =
-    document.getElementById(
-        "game"
-    );
-
-const error =
-    document.getElementById(
-        "error"
-    );
-
-
-document
-    .getElementById(
-        "createButton"
-    )
-    .onclick =
     () => {
 
-        error.textContent =
-            "";
-
-        socket.emit(
-            "createRoom",
-            document
-                .getElementById(
-                    "nameInput"
-                )
-                .value
-        );
-
-    };
+        joystickActive =
+            false;
 
 
-document
-    .getElementById(
-        "joinButton"
-    )
-    .onclick =
-    () => {
-
-        error.textContent =
-            "";
-
-        socket.emit(
-            "joinRoom",
-            {
-
-                code:
-                    document
-                        .getElementById(
-                            "roomInput"
-                        )
-                        .value,
-
-                name:
-                    document
-                        .getElementById(
-                            "nameInput"
-                        )
-                        .value
-
-            }
-        );
-
-    };
+        knob.style.transform =
+            "translate(0, 0)";
 
 
-/* =====================================================
-   JOINED
-===================================================== */
+        input.up =
+            false;
 
-socket.on(
-    "joined",
-    data => {
+        input.down =
+            false;
 
-        roomCode =
-            data.roomCode;
+        input.left =
+            false;
 
-        myId =
-            data.playerId;
+        input.right =
+            false;
 
-        menu.style.display =
-            "none";
 
-        game.style.display =
-            "block";
-
-        document
-            .getElementById(
-                "roomLabel"
-            )
-            .textContent =
-            "Room: " +
-            roomCode;
+        sendInput();
 
     }
 );
 
 
 /* =====================================================
-   ERROR
-===================================================== */
-
-socket.on(
-    "errorMessage",
-    message => {
-
-        error.textContent =
-            message;
-
-    }
-);
-
-
-/* =====================================================
-   STATE
-===================================================== */
-
-socket.on(
-    "state",
-    newState => {
-
-        state =
-            newState;
-
-
-        /*
-        Keep local movement
-        visually smooth.
-
-        Server remains authoritative.
-        */
-
-        const serverPlayer =
-            state.players.find(
-                p =>
-                    p.id ===
-                    myId
-            );
-
-        if (
-            serverPlayer
-        ) {
-
-            /*
-            Small correction only.
-            */
-
-            localPlayer.x +=
-                (
-                    serverPlayer.x -
-                    localPlayer.x
-                ) *
-                0.15;
-
-            localPlayer.y +=
-                (
-                    serverPlayer.y -
-                    localPlayer.y
-                ) *
-                0.15;
-
-        }
-
-
-        updateHUD();
-
-
-        if (
-            state.hostId ===
-            myId &&
-            !state.started
-        ) {
-
-            document
-                .getElementById(
-                    "startGameButton"
-                )
-                .style.display =
-                "block";
-
-        } else {
-
-            document
-                .getElementById(
-                    "startGameButton"
-                )
-                .style.display =
-                "none";
-
-        }
-
-    }
-);
-
-
-/* =====================================================
-   START
-===================================================== */
-
-document
-    .getElementById(
-        "startGameButton"
-    )
-    .onclick =
-    () => {
-
-        socket.emit(
-            "startGame"
-        );
-
-    };
-
-
-/* =====================================================
-   HUD
-===================================================== */
-
-function updateHUD() {
-
-    if (
-        !state
-    ) {
-
-        return;
-
-    }
-
-    document
-        .getElementById(
-            "money"
-        )
-        .textContent =
-        state.money;
-
-    document
-        .getElementById(
-            "fuel"
-        )
-        .textContent =
-        state.fuel +
-        "/" +
-        state.maxFuel;
-
-    document
-        .getElementById(
-            "stock"
-        )
-        .textContent =
-        state.stock +
-        "/" +
-        state.maxStock;
-
-    document
-        .getElementById(
-            "clean"
-        )
-        .textContent =
-        state.cleanliness;
-
-    document
-        .getElementById(
-            "day"
-        )
-        .textContent =
-        state.day;
-
-}
-
-
-/* =====================================================
-   PANEL
-===================================================== */
-
-const panel =
-    document.getElementById(
-        "panel"
-    );
-
-
-document
-    .getElementById(
-        "menuButton"
-    )
-    .onclick =
-    () => {
-
-        panel.style.display =
-            panel.style.display ===
-            "block"
-                ? "none"
-                : "block";
-
-    };
-
-
-document
-    .getElementById(
-        "closePanel"
-    )
-    .onclick =
-    () => {
-
-        panel.style.display =
-            "none";
-
-    };
-
-
-/* =====================================================
-   BOT HIRING
-===================================================== */
-
-function hireBot(
-    job
-) {
-
-    socket.emit(
-        "hireBot",
-        job
-    );
-
-}
-
-
-document
-    .getElementById(
-        "hireFuel"
-    )
-    .onclick =
-    () =>
-        hireBot(
-            "fuel"
-        );
-
-
-document
-    .getElementById(
-        "hireCashier"
-    )
-    .onclick =
-    () =>
-        hireBot(
-            "cashier"
-        );
-
-
-document
-    .getElementById(
-        "hireRestocker"
-    )
-    .onclick =
-    () =>
-        hireBot(
-            "restocker"
-        );
-
-
-document
-    .getElementById(
-        "hireCleaner"
-    )
-    .onclick =
-    () =>
-        hireBot(
-            "cleaner"
-        );
-
-
-/* =====================================================
-   UPGRADES
-===================================================== */
-
-document
-    .getElementById(
-        "upgradePump"
-    )
-    .onclick =
-    () => {
-
-        socket.emit(
-            "upgrade",
-            "pump"
-        );
-
-    };
-
-
-document
-    .getElementById(
-        "upgradeShelves"
-    )
-    .onclick =
-    () => {
-
-        socket.emit(
-            "upgrade",
-            "shelves"
-        );
-
-    };
-
-
-document
-    .getElementById(
-        "upgradeEmployees"
-    )
-    .onclick =
-    () => {
-
-        socket.emit(
-            "upgrade",
-            "employees"
-        );
-
-    };
-
-
-/* =====================================================
-   DRAWING
-===================================================== */
-
-function drawStation() {
-
-    /*
-    Ground
-    */
-
-    ctx.fillStyle =
-        "#3a3a3a";
-
-    ctx.fillRect(
-        0,
-        0,
-        960,
-        540
-    );
-
-
-    /*
-    Road
-    */
-
-    ctx.fillStyle =
-        "#202020";
-
-    ctx.fillRect(
-        0,
-        0,
-        960,
-        100
-    );
-
-    ctx.fillRect(
-        0,
-        440,
-        960,
-        100
-    );
-
-
-    /*
-    Store
-    */
-
-    ctx.fillStyle =
-        "#d8d8d8";
-
-    ctx.fillRect(
-        170,
-        100,
-        420,
-        330
-    );
-
-
-    /*
-    Store roof
-    */
-
-    ctx.fillStyle =
-        "#e63946";
-
-    ctx.fillRect(
-        170,
-        100,
-        420,
-        35
-    );
-
-
-    /*
-    Register
-    */
-
-    drawStationObject(
-        330,
-        220,
-        "#ffb703",
-        "REGISTER"
-    );
-
-
-    /*
-    Shelves
-    */
-
-    drawStationObject(
-        500,
-        220,
-        "#4dabf7",
-        "SHELVES"
-    );
-
-
-    /*
-    Storage
-    */
-
-    drawStationObject(
-        500,
-        430,
-        "#9b5de5",
-        "STORAGE"
-    );
-
-
-    /*
-    Cleaning
-    */
-
-    drawStationObject(
-        270,
-        430,
-        "#51cf66",
-        "CLEAN"
-    );
-
-
-    /*
-    Delivery
-    */
-
-    drawStationObject(
-        720,
-        500,
-        "#f77f00",
-        "DELIVERY"
-    );
-
-
-    /*
-    Pumps
-    */
-
-    if (
-        state
-    ) {
-
-        for (
-            let i = 0;
-            i <
-            state.upgrades.pumps;
-            i++
-        ) {
-
-            const pump =
-                [
-                    [700,170],
-                    [820,170],
-                    [700,300],
-                    [820,300]
-                ][i];
-
-            ctx.fillStyle =
-                "#555";
-
-            ctx.fillRect(
-                pump[0] -
-                20,
-                pump[1] -
-                20,
-                40,
-                40
-            );
-
-            ctx.fillStyle =
-                "#ffb703";
-
-            ctx.fillRect(
-                pump[0] -
-                10,
-                pump[1] -
-                10,
-                20,
-                20
-            );
-
-        }
-
-    }
-
-}
-
-
-function drawStationObject(
-    x,
-    y,
-    color,
-    label
-) {
-
-    ctx.fillStyle =
-        color;
-
-    ctx.fillRect(
-        x -
-        30,
-        y -
-        30,
-        60,
-        60
-    );
-
-    ctx.fillStyle =
-        "#111";
-
-    ctx.font =
-        "10px Arial";
-
-    ctx.textAlign =
-        "center";
-
-    ctx.fillText(
-        label,
-        x,
-        y +
-        4
-    );
-
-}
-
-
-/* =====================================================
-   ENTITY DRAWING
-===================================================== */
-
-function drawPlayer(
-    player
-) {
-
-    ctx.fillStyle =
-        player.color;
-
-    ctx.beginPath();
-
-    ctx.arc(
-        player.x,
-        player.y,
-        14,
-        0,
-        Math.PI *
-        2
-    );
-
-    ctx.fill();
-
-
-    ctx.fillStyle =
-        "white";
-
-    ctx.font =
-        "11px Arial";
-
-    ctx.textAlign =
-        "center";
-
-    ctx.fillText(
-        player.name,
-        player.x,
-        player.y -
-        20
-    );
-
-}
-
-
-function drawBot(
-    bot
-) {
-
-    ctx.fillStyle =
-        "#aaaaaa";
-
-    ctx.fillRect(
-        bot.x -
-        11,
-        bot.y -
-        11,
-        22,
-        22
-    );
-
-    ctx.fillStyle =
-        "white";
-
-    ctx.font =
-        "9px Arial";
-
-    ctx.textAlign =
-        "center";
-
-    ctx.fillText(
-        "BOT",
-        bot.x,
-        bot.y +
-        3
-    );
-
-}
-
-
-function drawCustomer(
-    customer
-) {
-
-    ctx.fillStyle =
-        "#f1fa8c";
-
-    ctx.beginPath();
-
-    ctx.arc(
-        customer.x,
-        customer.y,
-        11,
-        0,
-        Math.PI *
-        2
-    );
-
-    ctx.fill();
-
-
-    /*
-    Progress bar
-    */
-
-    if (
-        customer.state ===
-        "fueling"
-    ) {
-
-        drawProgress(
-            customer.x,
-            customer.y -
-            18,
-            customer.fuelProgress
-        );
-
-    }
-
-    if (
-        customer.state ===
-        "checkingOut"
-    ) {
-
-        drawProgress(
-            customer.x,
-            customer.y -
-            18,
-            customer.checkoutProgress
-        );
-
-    }
-
-}
-
-
-function drawProgress(
-    x,
-    y,
-    progress
-) {
-
-    ctx.fillStyle =
-        "#111";
-
-    ctx.fillRect(
-        x -
-        15,
-        y,
-        30,
-        4
-    );
-
-    ctx.fillStyle =
-        "#51cf66";
-
-    ctx.fillRect(
-        x -
-        15,
-        y,
-        30 *
-        (
-            progress /
-            100
-        ),
-        4
-    );
-
-}
-
-
-/* =====================================================
-   RENDER
-===================================================== */
-
-function render() {
-
-    /*
-    Clear
-    */
-
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-
-    /*
-    Station
-    */
-
-    drawStation();
-
-
-    if (
-        !state
-    ) {
-
-        return;
-
-    }
-
-
-    /*
-    Draw customers
-    */
-
-    for (
-        const customer of
-        state.customers
-    ) {
-
-        drawCustomer(
-            customer
-        );
-
-    }
-
-
-    /*
-    Draw bots
-    */
-
-    for (
-        const bot of
-        state.bots
-    ) {
-
-        drawBot(
-            bot
-        );
-
-    }
-
-
-    /*
-    Draw players
-
-    The local player uses
-    predicted coordinates.
-    */
-
-    for (
-        const player of
-        state.players
-    ) {
-
-        if (
-            player.id ===
-            myId
-        ) {
-
-            drawPlayer({
-
-                ...player,
-
-                x:
-                    localPlayer.x,
-
-                y:
-                    localPlayer.y
-
-            });
-
-        } else {
-
-            drawPlayer(
-                player
-            );
-
-        }
-
-    }
-
-
-    /*
-    Draw tasks
-    */
-
-    for (
-        const task of
-        state.tasks
-    ) {
-
-        ctx.fillStyle =
-            "#ffffff";
-
-        ctx.font =
-            "20px Arial";
-
-        ctx.textAlign =
-            "center";
-
-        ctx.fillText(
-            "!",
-            task.x,
-            task.y
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   30 FPS GAME LOOP
-===================================================== */
-
-let lastFrame =
-    0;
-
-const FRAME_TIME =
-    1000 /
-    30;
-
-
-function gameLoop(
-    timestamp
-) {
-
-    if (
-        timestamp -
-        lastFrame >=
-        FRAME_TIME
-    ) {
-
-        lastFrame =
-            timestamp;
-
-        updateLocalMovement();
-
-        render();
-
-    }
-
-    requestAnimationFrame(
-        gameLoop
-    );
-
-}
-
-
-requestAnimationFrame(
-    gameLoop
-);
-
-
-/* =====================================================
-   PREVENT MOBILE SCROLLING
+   PREVENT MOBILE SCROLL
 ===================================================== */
 
 document.addEventListener(
     "touchmove",
-    e => {
+    event => {
 
-        if (
-            e.target.closest(
-                "#joystick"
-            )
-        ) {
-
-            e.preventDefault();
-
-        }
+        event.preventDefault();
 
     },
     {
         passive:
             false
-    }
-);
-
-
-/* =====================================================
-   CONNECTION STATUS
-===================================================== */
-
-socket.on(
-    "connect",
-    () => {
-
-        console.log(
-            "Connected to Octane server."
-        );
-
-    }
-);
-
-
-socket.on(
-    "disconnect",
-    () => {
-
-        console.log(
-            "Disconnected from server."
-        );
-
     }
 );
 
