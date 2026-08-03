@@ -1,7 +1,6 @@
 const express = require("express");
 const http = require("http");
 const path = require("path");
-const crypto = require("crypto");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -15,23 +14,29 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(__dirname));
 
 const MAX_PLAYERS = 4;
-const MAX_CUSTOMERS = 8;
-const TICK_RATE = 12;
-const STATE_RATE = 10;
+const WORLD_WIDTH = 1400;
+const WORLD_HEIGHT = 800;
 
-const WORLD = {
-    width: 1400,
-    height: 800
-};
+const TICK_RATE = 15;
+const STATE_RATE = 8;
 
-const PLAYER_COLORS = [
+const rooms = {};
+
+const COLORS = [
     "#ff5555",
     "#4dabf7",
     "#51cf66",
     "#fcc419"
+];
+
+const BOT_JOBS = [
+    "fuel",
+    "cashier",
+    "restocker",
+    "cleaner"
 ];
 
 const BOT_NAMES = [
@@ -43,110 +48,101 @@ const BOT_NAMES = [
     "Morgan"
 ];
 
-const JOBS = [
-    "fuel",
-    "cashier",
-    "restocker",
-    "cleaner"
+const PUMPS = [
+    { x: 980, y: 230 },
+    { x: 1120, y: 230 },
+    { x: 1260, y: 230 },
+    { x: 1330, y: 230 }
 ];
 
-const rooms = {};
+const SHELF = {
+    x: 750,
+    y: 330
+};
 
-function generateRoomCode() {
+const REGISTER = {
+    x: 530,
+    y: 270
+};
 
-    const chars =
-        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const STORAGE = {
+    x: 450,
+    y: 500
+};
 
-    let code = "";
+const CLEANING = {
+    x: 630,
+    y: 535
+};
+
+const DELIVERY = {
+    x: 650,
+    y: 700
+};
+
+function randomRoomCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+    let code;
 
     do {
-
         code = "";
 
-        for (
-            let i = 0;
-            i < 4;
-            i++
-        ) {
-
-            code +=
-                chars[
-                    Math.floor(
-                        Math.random() *
-                        chars.length
-                    )
-                ];
+        for (let i = 0; i < 4; i++) {
+            code += chars[
+                Math.floor(Math.random() * chars.length)
+            ];
         }
-
     } while (rooms[code]);
 
     return code;
 }
 
-function createRoom(hostId) {
-
-    const code =
-        generateRoomCode();
+function createRoom() {
+    const code = randomRoomCode();
 
     rooms[code] = {
-
         code,
-
-        hostId,
-
+        hostId: null,
         started: false,
 
         money: 100,
 
         fuel: 40,
-
         maxFuel: 100,
 
         storeStock: 20,
-
         maxStoreStock: 40,
+
+        boxes: 10,
 
         cleanliness: 100,
 
         day: 1,
-
         time: 8 * 60,
 
         players: {},
-
         bots: {},
-
         customers: {},
 
         nextBotId: 1,
-
         nextCustomerId: 1,
 
+        tasks: [],
+
         upgrades: {
-
             pumps: 2,
-
-            storeShelves: 1,
-
+            shelves: 1,
             employeeSlots: 2
         }
-
     };
 
     return rooms[code];
 }
 
-function getRoomForSocket(socketId) {
-
-    for (
-        const room of
-        Object.values(rooms)
-    ) {
-
-        if (
-            room.players[socketId]
-        ) {
-
+function getRoom(socketId) {
+    for (const room of Object.values(rooms)) {
+        if (room.players[socketId]) {
             return room;
         }
     }
@@ -154,490 +150,510 @@ function getRoomForSocket(socketId) {
     return null;
 }
 
-function sanitizeName(name) {
-
-    return String(name || "")
+function cleanName(name) {
+    return String(name || "Player")
         .trim()
         .substring(0, 20)
-        .replace(
-            /[<>]/g,
-            ""
-        ) || "Player";
-}
-
-function formatTime(minutes) {
-
-    const hours =
-        Math.floor(
-            minutes / 60
-        );
-
-    const mins =
-        Math.floor(
-            minutes % 60
-        );
-
-    return (
-        String(hours)
-            .padStart(2, "0") +
-        ":" +
-        String(mins)
-            .padStart(2, "0")
-    );
+        .replace(/[<>]/g, "") || "Player";
 }
 
 function distance(a, b) {
-
     return Math.hypot(
         a.x - b.x,
         a.y - b.y
     );
 }
 
-function isInsideBuilding(x, y) {
-
-    return (
-        x > 350 &&
-        x < 900 &&
-        y > 170 &&
-        y < 600
-    );
-}
-
-function isDoor(x, y) {
-
-    return (
-        x > 580 &&
-        x < 680 &&
-        y > 560
+function clamp(value, min, max) {
+    return Math.max(
+        min,
+        Math.min(max, value)
     );
 }
 
 function isBlocked(x, y) {
-
     if (
         x < 20 ||
-        x > WORLD.width - 20 ||
+        x > WORLD_WIDTH - 20 ||
         y < 20 ||
-        y > WORLD.height - 20
+        y > WORLD_HEIGHT - 20
     ) {
-
         return true;
     }
 
+    // Main building
     if (
-        isInsideBuilding(x, y) &&
-        !isDoor(x, y)
+        x > 350 &&
+        x < 900 &&
+        y > 170 &&
+        y < 600
     ) {
-
-        return true;
-    }
-
-    return false;
-}
-
-function moveEntity(
-    entity,
-    dx,
-    dy
-) {
-
-    const speed =
-        entity.speed || 3;
-
-    const newX =
-        entity.x +
-        dx * speed;
-
-    const newY =
-        entity.y +
-        dy * speed;
-
-    if (
-        !isBlocked(
-            newX,
-            entity.y
-        )
-    ) {
-
-        entity.x = newX;
-    }
-
-    if (
-        !isBlocked(
-            entity.x,
-            newY
-        )
-    ) {
-
-        entity.y = newY;
-    }
-}
-
-function moveTowards(
-    entity,
-    targetX,
-    targetY,
-    speed
-) {
-
-    const dx =
-        targetX -
-        entity.x;
-
-    const dy =
-        targetY -
-        entity.y;
-
-    const length =
-        Math.hypot(
-            dx,
-            dy
-        );
-
-    if (
-        length < 5
-    ) {
-
-        return true;
-    }
-
-    entity.x +=
-        dx / length *
-        speed;
-
-    entity.y +=
-        dy / length *
-        speed;
-
-    return false;
-}
-
-function getPump(index) {
-
-    const pumps = [
-
-        {
-            x: 980,
-            y: 230
-        },
-
-        {
-            x: 1120,
-            y: 230
-        },
-
-        {
-            x: 1260,
-            y: 230
-        },
-
-        {
-            x: 1330,
-            y: 230
+        // Front door
+        if (
+            x > 580 &&
+            x < 680 &&
+            y > 540
+        ) {
+            return false;
         }
 
-    ];
+        return true;
+    }
 
-    return pumps[index];
+    return false;
+}
+
+function movePlayer(player, dx, dy) {
+    const speed = 3;
+
+    const length = Math.hypot(dx, dy);
+
+    if (length > 0) {
+        dx /= length;
+        dy /= length;
+    }
+
+    const newX = player.x + dx * speed;
+    const newY = player.y + dy * speed;
+
+    if (!isBlocked(newX, player.y)) {
+        player.x = clamp(
+            newX,
+            20,
+            WORLD_WIDTH - 20
+        );
+    }
+
+    if (!isBlocked(player.x, newY)) {
+        player.y = clamp(
+            newY,
+            20,
+            WORLD_HEIGHT - 20
+        );
+    }
+}
+
+function getNearbyPump(player) {
+    for (
+        let i = 0;
+        i < roomPumpCount(player.room);
+        i++
+    ) {
+        if (
+            distance(
+                player,
+                PUMPS[i]
+            ) < 75
+        ) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+function roomPumpCount(room) {
+    return room.upgrades.pumps;
 }
 
 function createCustomer(room) {
-
     if (
-        Object.keys(
-            room.customers
-        ).length >=
-        MAX_CUSTOMERS
+        Object.keys(room.customers).length >= 8
     ) {
-
         return;
     }
 
+    const pumpIndex = Math.floor(
+        Math.random() * room.upgrades.pumps
+    );
+
+    const pump = PUMPS[pumpIndex];
+
     const id =
-        `customer-${room.nextCustomerId++}`;
-
-    const pumpIndex =
-        Math.floor(
-            Math.random() *
-            room.upgrades.pumps
-        );
-
-    const pump =
-        getPump(pumpIndex);
+        "customer-" +
+        room.nextCustomerId++;
 
     room.customers[id] = {
-
         id,
 
         x: 650,
-
         y: 700,
 
-        state: "toPump",
+        state: "entering",
 
         pumpIndex,
 
         targetX: pump.x,
-
-        targetY:
-            pump.y + 70,
+        targetY: pump.y + 70,
 
         fuelNeeded:
+            8 +
             Math.floor(
-                8 +
-                Math.random() *
-                12
+                Math.random() * 13
             ),
 
         fuelProgress: 0,
 
-        patience: 100,
-
-        wantsStore:
-            Math.random() <
-            0.55,
+        checkoutProgress: 0,
 
         payment: 0,
 
-        speed: 1.5
+        patience: 100,
 
+        wantsStore:
+            Math.random() < 0.6
     };
 }
 
-function findFuelCustomer(
-    room,
-    pumpIndex
-) {
+function createDirtySpot(room) {
+    if (
+        room.tasks.some(
+            task =>
+                task.type === "clean"
+        )
+    ) {
+        return;
+    }
 
-    return Object.values(
-        room.customers
-    ).find(
-        customer =>
-            customer.pumpIndex ===
-            pumpIndex &&
-            customer.state ===
-            "waitingFuel"
-    );
+    room.tasks.push({
+        id:
+            "clean-" +
+            Date.now(),
+
+        type: "clean",
+
+        x:
+            400 +
+            Math.random() * 400,
+
+        y:
+            250 +
+            Math.random() * 250,
+
+        progress: 0
+    });
 }
 
-function findCheckoutCustomer(
-    room
-) {
+function moveTowards(entity, x, y, speed) {
+    const dx = x - entity.x;
+    const dy = y - entity.y;
 
-    return Object.values(
-        room.customers
-    ).find(
-        customer =>
-            customer.state ===
-            "waitingCheckout"
-    );
+    const length = Math.hypot(dx, dy);
+
+    if (length < 5) {
+        return true;
+    }
+
+    entity.x +=
+        dx / length * speed;
+
+    entity.y +=
+        dy / length * speed;
+
+    return false;
 }
 
-function handleInteraction(
+function startPlayerTask(
     room,
     player
 ) {
-
-    // Fuel pumps
-
-    for (
-        let i = 0;
-        i < room.upgrades.pumps;
-        i++
-    ) {
-
-        const pump =
-            getPump(i);
-
-        if (
-            distance(
-                player,
-                pump
-            ) < 80
-        ) {
-
-            const customer =
-                findFuelCustomer(
-                    room,
-                    i
-                );
-
-            if (
-                customer &&
-                room.fuel > 0
-            ) {
-
-                customer.state =
-                    "fueling";
-
-                customer.fueledBy =
-                    player.id;
-
-                player.action =
-                    "fueling";
-
-                return;
-            }
-        }
+    // Stop current task
+    if (player.task) {
+        return;
     }
 
-    // Register
+    // Fueling
+    const pumpIndex =
+        getNearbyPump(player);
 
-    if (
-        distance(
-            player,
-            {
-                x: 530,
-                y: 270
-            }
-        ) < 80
-    ) {
-
-        const customer =
-            findCheckoutCustomer(
-                room
-            );
-
-        if (customer) {
-
-            customer.state =
-                "checkingOut";
-
-            customer.checkoutProgress =
-                0;
-
-            player.action =
-                "cashier";
-
-            return;
-        }
-    }
-
-    // Store
-
-    if (
-        distance(
-            player,
-            {
-                x: 755,
-                y: 330
-            }
-        ) < 100
-    ) {
-
+    if (pumpIndex !== -1) {
         const customer =
             Object.values(
                 room.customers
             ).find(
                 c =>
-                    c.state ===
-                    "shopping"
+                    c.pumpIndex === pumpIndex &&
+                    c.state === "waitingFuel"
             );
 
-        if (
-            customer &&
-            room.storeStock > 0
-        ) {
+        if (customer) {
+            player.task = {
+                type: "fuel",
+                customerId: customer.id
+            };
 
-            room.storeStock--;
-
-            customer.state =
-                "waitingCheckout";
-
-            customer.payment = 8;
-
-            player.action =
-                "store";
+            customer.state = "fueling";
 
             return;
         }
     }
 
-    // Storage
-
+    // Register
     if (
         distance(
             player,
-            {
-                x: 465,
-                y: 500
-            }
-        ) < 100
+            REGISTER
+        ) < 80
     ) {
+        const customer =
+            Object.values(
+                room.customers
+            ).find(
+                c =>
+                    c.state === "waitingCheckout"
+            );
 
-        if (
-            room.money >= 20 &&
-            room.storeStock <
-            room.maxStoreStock
-        ) {
+        if (customer) {
+            player.task = {
+                type: "cashier",
+                customerId: customer.id
+            };
 
-            room.money -= 20;
-
-            room.storeStock =
-                Math.min(
-                    room.maxStoreStock,
-                    room.storeStock +
-                    10
-                );
-
-            player.action =
-                "restocking";
+            customer.state =
+                "checkingOut";
 
             return;
         }
+    }
+
+    // Pick up a restock box
+    if (
+        distance(
+            player,
+            STORAGE
+        ) < 90 &&
+        room.boxes > 0 &&
+        !player.carrying
+    ) {
+        player.carrying = "box";
+
+        return;
+    }
+
+    // Stock shelves
+    if (
+        distance(
+            player,
+            SHELF
+        ) < 100 &&
+        player.carrying === "box"
+    ) {
+        player.task = {
+            type: "restock",
+            progress: 0
+        };
+
+        return;
     }
 
     // Cleaning
-
     if (
         distance(
             player,
-            {
-                x: 630,
-                y: 535
-            }
-        ) < 90
+            CLEANING
+        ) < 100
     ) {
-
-        room.cleanliness =
-            Math.min(
-                100,
-                room.cleanliness +
-                15
+        const spot =
+            room.tasks.find(
+                task =>
+                    task.type === "clean"
             );
 
-        player.action =
-            "cleaning";
+        if (spot) {
+            player.task = {
+                type: "clean",
+                taskId: spot.id
+            };
+
+            return;
+        }
+    }
+
+    // Fuel delivery
+    if (
+        distance(
+            player,
+            DELIVERY
+        ) < 100 &&
+        room.fuel < room.maxFuel
+    ) {
+        player.task = {
+            type: "delivery",
+            progress: 0
+        };
     }
 }
 
-function updateCustomers(
-    room
+function updatePlayerTask(
+    room,
+    player
 ) {
+    if (!player.task) {
+        return;
+    }
 
-    for (
-        const customer of
-        Object.values(
-            room.customers
-        )
-    ) {
+    const task = player.task;
+
+    // Fueling
+    if (task.type === "fuel") {
+        const customer =
+            room.customers[
+                task.customerId
+            ];
+
+        if (!customer) {
+            player.task = null;
+            return;
+        }
+
+        if (room.fuel <= 0) {
+            player.task = null;
+            customer.state = "leaving";
+            return;
+        }
+
+        room.fuel -= 0.15;
+
+        customer.fuelProgress += 1.5;
 
         if (
-            customer.state ===
-            "toPump"
+            customer.fuelProgress >= 100
         ) {
+            room.money +=
+                customer.fuelNeeded * 2;
 
-            const arrived =
-                moveTowards(
-                    customer,
-                    customer.targetX,
-                    customer.targetY,
-                    customer.speed
+            if (customer.wantsStore) {
+                customer.state = "shopping";
+            } else {
+                customer.state = "leaving";
+            }
+
+            player.task = null;
+        }
+
+        return;
+    }
+
+    // Cashier
+    if (task.type === "cashier") {
+        const customer =
+            room.customers[
+                task.customerId
+            ];
+
+        if (!customer) {
+            player.task = null;
+            return;
+        }
+
+        customer.checkoutProgress += 2;
+
+        if (
+            customer.checkoutProgress >= 100
+        ) {
+            room.money += customer.payment;
+
+            customer.state = "leaving";
+
+            player.task = null;
+        }
+
+        return;
+    }
+
+    // Restocking
+    if (task.type === "restock") {
+        task.progress += 2;
+
+        if (task.progress >= 100) {
+            room.storeStock =
+                Math.min(
+                    room.maxStoreStock,
+                    room.storeStock + 10
                 );
 
-            if (arrived) {
+            room.boxes--;
 
+            player.carrying = null;
+
+            player.task = null;
+        }
+
+        return;
+    }
+
+    // Cleaning
+    if (task.type === "clean") {
+        const spot =
+            room.tasks.find(
+                t =>
+                    t.id === task.taskId
+            );
+
+        if (!spot) {
+            player.task = null;
+            return;
+        }
+
+        task.progress += 3;
+
+        if (task.progress >= 100) {
+            room.cleanliness =
+                Math.min(
+                    100,
+                    room.cleanliness + 15
+                );
+
+            room.tasks =
+                room.tasks.filter(
+                    t =>
+                        t.id !== task.taskId
+                );
+
+            player.task = null;
+        }
+
+        return;
+    }
+
+    // Fuel delivery
+    if (task.type === "delivery") {
+        task.progress += 1;
+
+        if (task.progress >= 100) {
+            room.fuel =
+                Math.min(
+                    room.maxFuel,
+                    room.fuel + 40
+                );
+
+            player.task = null;
+        }
+    }
+}
+
+function updateCustomers(room) {
+    for (
+        const customer of
+        Object.values(room.customers)
+    ) {
+        if (
+            customer.state ===
+            "entering"
+        ) {
+            const pump =
+                PUMPS[
+                    customer.pumpIndex
+                ];
+
+            if (
+                moveTowards(
+                    customer,
+                    pump.x,
+                    pump.y + 70,
+                    1.5
+                )
+            ) {
                 customer.state =
                     "waitingFuel";
             }
@@ -645,101 +661,33 @@ function updateCustomers(
 
         else if (
             customer.state ===
-            "fueling"
+            "shopping"
         ) {
-
             if (
-                room.fuel <= 0
+                room.storeStock <= 0
             ) {
-
                 customer.state =
-                    "leaving";
+                    "waitingCheckout";
+
+                customer.payment = 0;
 
                 continue;
             }
 
-            customer.fuelProgress +=
-                2;
-
-            room.fuel =
-                Math.max(
-                    0,
-                    room.fuel -
-                    customer.fuelNeeded /
-                    50
-                );
-
             if (
-                customer.fuelProgress >=
-                100
-            ) {
-
-                room.money +=
-                    customer.fuelNeeded *
-                    2;
-
-                if (
-                    customer.wantsStore
-                ) {
-
-                    customer.state =
-                        "shopping";
-
-                    customer.targetX =
-                        755;
-
-                    customer.targetY =
-                        330;
-
-                } else {
-
-                    customer.state =
-                        "leaving";
-                }
-            }
-        }
-
-        else if (
-            customer.state ===
-            "shopping"
-        ) {
-
-            const arrived =
                 moveTowards(
                     customer,
-                    customer.targetX,
-                    customer.targetY,
-                    customer.speed
-                );
-
-            if (
-                arrived &&
-                room.storeStock <= 0
+                    SHELF.x,
+                    SHELF.y,
+                    1.5
+                )
             ) {
+                room.storeStock--;
 
                 customer.state =
-                    "leaving";
-            }
-        }
+                    "waitingCheckout";
 
-        else if (
-            customer.state ===
-            "checkingOut"
-        ) {
-
-            customer.checkoutProgress +=
-                2;
-
-            if (
-                customer.checkoutProgress >=
-                100
-            ) {
-
-                room.money +=
-                    customer.payment;
-
-                customer.state =
-                    "leaving";
+                customer.payment = 8;
             }
         }
 
@@ -747,17 +695,14 @@ function updateCustomers(
             customer.state ===
             "leaving"
         ) {
-
-            const arrived =
+            if (
                 moveTowards(
                     customer,
                     650,
                     700,
                     2
-                );
-
-            if (arrived) {
-
+                )
+            ) {
                 delete room.customers[
                     customer.id
                 ];
@@ -768,14 +713,12 @@ function updateCustomers(
             customer.state !==
             "leaving"
         ) {
-
             customer.patience -=
-                0.015;
+                0.01;
 
             if (
                 customer.patience <= 0
             ) {
-
                 customer.state =
                     "leaving";
             }
@@ -785,38 +728,24 @@ function updateCustomers(
     if (
         Object.keys(
             room.customers
-        ).length <
-        MAX_CUSTOMERS
+        ).length < 8
     ) {
-
         if (
-            Math.random() <
-            0.035
+            Math.random() < 0.025
         ) {
-
-            createCustomer(
-                room
-            );
+            createCustomer(room);
         }
     }
 }
 
 function updateBots(room) {
-
     for (
         const bot of
-        Object.values(
-            room.bots
-        )
+        Object.values(room.bots)
     ) {
-
-        bot.actionTimer++;
-
         if (
-            bot.job ===
-            "fuel"
+            bot.job === "fuel"
         ) {
-
             const customer =
                 Object.values(
                     room.customers
@@ -826,209 +755,230 @@ function updateBots(room) {
                         "waitingFuel"
                 );
 
-            if (customer) {
-
-                const pump =
-                    getPump(
-                        customer.pumpIndex
-                    );
-
-                const arrived =
-                    moveTowards(
-                        bot,
-                        pump.x,
-                        pump.y + 70,
-                        2
-                    );
-
-                if (
-                    arrived &&
-                    room.fuel > 0
-                ) {
-
-                    customer.state =
-                        "fueling";
-
-                    customer.fueledBy =
-                        bot.id;
-                }
+            if (!customer) {
+                continue;
             }
-        }
 
-        else if (
-            bot.job ===
-            "cashier"
-        ) {
-
-            const customer =
-                findCheckoutCustomer(
-                    room
-                );
-
-            if (customer) {
-
-                const arrived =
-                    moveTowards(
-                        bot,
-                        530,
-                        270,
-                        2
-                    );
-
-                if (arrived) {
-
-                    customer.state =
-                        "checkingOut";
-
-                    customer.checkoutProgress =
-                        0;
-                }
-            }
-        }
-
-        else if (
-            bot.job ===
-            "restocker"
-        ) {
+            const pump =
+                PUMPS[
+                    customer.pumpIndex
+                ];
 
             if (
-                room.storeStock <
-                room.maxStoreStock &&
-                room.money >= 20
+                moveTowards(
+                    bot,
+                    pump.x,
+                    pump.y + 70,
+                    2
+                )
             ) {
+                customer.state =
+                    "fueling";
 
-                const arrived =
-                    moveTowards(
-                        bot,
-                        465,
-                        500,
-                        2
+                room.fuel =
+                    Math.max(
+                        0,
+                        room.fuel - 0.1
                     );
 
-                if (
-                    arrived &&
-                    bot.actionTimer >
-                    120
-                ) {
+                customer.fuelProgress += 1;
 
-                    room.money -= 20;
+                if (
+                    customer.fuelProgress >=
+                    100
+                ) {
+                    room.money +=
+                        customer.fuelNeeded * 2;
+
+                    customer.state =
+                        customer.wantsStore
+                            ? "shopping"
+                            : "leaving";
+                }
+            }
+        }
+
+        else if (
+            bot.job === "cashier"
+        ) {
+            const customer =
+                Object.values(
+                    room.customers
+                ).find(
+                    c =>
+                        c.state ===
+                        "waitingCheckout"
+                );
+
+            if (!customer) {
+                continue;
+            }
+
+            if (
+                moveTowards(
+                    bot,
+                    REGISTER.x,
+                    REGISTER.y,
+                    2
+                )
+            ) {
+                customer.state =
+                    "checkingOut";
+
+                customer.checkoutProgress += 2;
+
+                if (
+                    customer.checkoutProgress >=
+                    100
+                ) {
+                    room.money +=
+                        customer.payment;
+
+                    customer.state =
+                        "leaving";
+                }
+            }
+        }
+
+        else if (
+            bot.job === "restocker"
+        ) {
+            if (
+                room.storeStock <
+                    room.maxStoreStock &&
+                room.boxes > 0
+            ) {
+                if (
+                    moveTowards(
+                        bot,
+                        STORAGE.x,
+                        STORAGE.y,
+                        2
+                    )
+                ) {
+                    room.boxes--;
 
                     room.storeStock =
                         Math.min(
                             room.maxStoreStock,
-                            room.storeStock +
-                            10
+                            room.storeStock + 10
                         );
-
-                    bot.actionTimer = 0;
                 }
             }
         }
 
         else if (
-            bot.job ===
-            "cleaner"
+            bot.job === "cleaner"
         ) {
+            const spot =
+                room.tasks.find(
+                    t =>
+                        t.type === "clean"
+                );
+
+            if (!spot) {
+                continue;
+            }
 
             if (
-                room.cleanliness <
-                80
+                moveTowards(
+                    bot,
+                    spot.x,
+                    spot.y,
+                    2
+                )
             ) {
-
-                const arrived =
-                    moveTowards(
-                        bot,
-                        630,
-                        535,
-                        2
+                room.cleanliness =
+                    Math.min(
+                        100,
+                        room.cleanliness + 0.5
                     );
-
-                if (
-                    arrived &&
-                    bot.actionTimer >
-                    60
-                ) {
-
-                    room.cleanliness =
-                        Math.min(
-                            100,
-                            room.cleanliness +
-                            10
-                        );
-
-                    bot.actionTimer = 0;
-                }
             }
         }
     }
 }
 
-function updateTime(room) {
-
-    if (
-        !room.started
-    ) {
-
+function updateWorld(room) {
+    if (!room.started) {
         return;
     }
 
-    room.time += 0.15;
+    updateCustomers(room);
+
+    updateBots(room);
+
+    for (
+        const player of
+        Object.values(room.players)
+    ) {
+        updatePlayerTask(
+            room,
+            player
+        );
+    }
+
+    room.time += 0.12;
 
     if (
-        room.time >=
-        24 * 60
+        room.time >= 1440
     ) {
-
         room.time = 0;
-
         room.day++;
 
-        room.money =
-            Math.max(
-                0,
-                room.money - 25
-            );
+        room.boxes = 10;
     }
 
     room.cleanliness =
         Math.max(
             0,
-            room.cleanliness -
-            0.003
+            room.cleanliness - 0.003
         );
+
+    if (
+        Math.random() < 0.002
+    ) {
+        createDirtySpot(room);
+    }
+
+    // Automatic fuel delivery
+    // boxes arrive as a simple supply.
+    if (
+        Math.random() < 0.0008
+    ) {
+        room.boxes =
+            Math.min(
+                30,
+                room.boxes + 5
+            );
+    }
 }
 
-function getState(room) {
-
+function publicState(room) {
     return {
+        roomCode: room.code,
 
-        roomCode:
-            room.code,
+        hostId: room.hostId,
 
-        hostId:
-            room.hostId,
+        started: room.started,
 
-        started:
-            room.started,
+        money: Math.floor(
+            room.money
+        ),
 
-        money:
-            Math.floor(
-                room.money
-            ),
+        fuel: Math.floor(
+            room.fuel
+        ),
 
-        fuel:
-            Math.floor(
-                room.fuel
-            ),
-
-        maxFuel:
-            room.maxFuel,
+        maxFuel: room.maxFuel,
 
         storeStock:
             room.storeStock,
 
         maxStoreStock:
             room.maxStoreStock,
+
+        boxes:
+            room.boxes,
 
         cleanliness:
             Math.floor(
@@ -1039,9 +989,7 @@ function getState(room) {
             room.day,
 
         time:
-            formatTime(
-                room.time
-            ),
+            formatTime(room.time),
 
         players:
             room.players,
@@ -1051,6 +999,9 @@ function getState(room) {
 
         customers:
             room.customers,
+
+        tasks:
+            room.tasks,
 
         upgrades:
             room.upgrades,
@@ -1065,16 +1016,88 @@ function getState(room) {
     };
 }
 
-function broadcastRoom(
-    room
-) {
+function formatTime(minutes) {
+    const hours =
+        Math.floor(
+            minutes / 60
+        );
 
+    const mins =
+        Math.floor(
+            minutes % 60
+        );
+
+    return (
+        String(hours).padStart(2, "0") +
+        ":" +
+        String(mins).padStart(2, "0")
+    );
+}
+
+function broadcast(room) {
     io.to(
         room.code
     ).emit(
         "gameState",
-        getState(room)
+        publicState(room)
     );
+}
+
+function joinRoom(
+    socket,
+    room,
+    name
+) {
+    const playerCount =
+        Object.keys(
+            room.players
+        ).length;
+
+    socket.join(
+        room.code
+    );
+
+    if (!room.hostId) {
+        room.hostId =
+            socket.id;
+    }
+
+    room.players[
+        socket.id
+    ] = {
+        id: socket.id,
+
+        name:
+            cleanName(name),
+
+        x:
+            600 +
+            playerCount * 40,
+
+        y: 650,
+
+        color:
+            COLORS[
+                playerCount
+            ],
+
+        carrying: null,
+
+        task: null
+    };
+
+    socket.emit(
+        "roomJoined",
+        {
+            roomCode:
+                room.code,
+
+            playerId:
+                socket.id
+        }
+    );
+
+    broadcast(room);
 }
 
 io.on(
@@ -1084,11 +1107,8 @@ io.on(
         socket.on(
             "createRoom",
             name => {
-
                 const room =
-                    createRoom(
-                        socket.id
-                    );
+                    createRoom();
 
                 joinRoom(
                     socket,
@@ -1101,11 +1121,9 @@ io.on(
         socket.on(
             "joinRoom",
             data => {
-
                 const code =
                     String(
-                        data.code ||
-                        ""
+                        data.code || ""
                     )
                     .trim()
                     .toUpperCase();
@@ -1114,7 +1132,6 @@ io.on(
                     rooms[code];
 
                 if (!room) {
-
                     socket.emit(
                         "roomError",
                         "Room not found."
@@ -1129,22 +1146,18 @@ io.on(
                     ).length >=
                     MAX_PLAYERS
                 ) {
-
                     socket.emit(
                         "roomError",
-                        "That room is full."
+                        "This room is full."
                     );
 
                     return;
                 }
 
-                if (
-                    room.started
-                ) {
-
+                if (room.started) {
                     socket.emit(
                         "roomError",
-                        "That game has already started."
+                        "This game has already started."
                     );
 
                     return;
@@ -1161,9 +1174,8 @@ io.on(
         socket.on(
             "startGame",
             () => {
-
                 const room =
-                    getRoomForSocket(
+                    getRoom(
                         socket.id
                     );
 
@@ -1178,28 +1190,17 @@ io.on(
                     return;
                 }
 
-                if (
-                    Object.keys(
-                        room.players
-                    ).length < 1
-                ) {
-                    return;
-                }
-
                 room.started = true;
 
-                broadcastRoom(
-                    room
-                );
+                broadcast(room);
             }
         );
 
         socket.on(
             "move",
             data => {
-
                 const room =
-                    getRoomForSocket(
+                    getRoom(
                         socket.id
                     );
 
@@ -1223,24 +1224,11 @@ io.on(
                 let dy = 0;
 
                 if (data.up) dy--;
-
                 if (data.down) dy++;
-
                 if (data.left) dx--;
-
                 if (data.right) dx++;
 
-                if (
-                    dx !== 0 &&
-                    dy !== 0
-                ) {
-
-                    dx *= 0.707;
-
-                    dy *= 0.707;
-                }
-
-                moveEntity(
+                movePlayer(
                     player,
                     dx,
                     dy
@@ -1251,9 +1239,8 @@ io.on(
         socket.on(
             "interact",
             () => {
-
                 const room =
-                    getRoomForSocket(
+                    getRoom(
                         socket.id
                     );
 
@@ -1269,22 +1256,47 @@ io.on(
                         socket.id
                     ];
 
-                if (player) {
-
-                    handleInteraction(
-                        room,
-                        player
-                    );
+                if (!player) {
+                    return;
                 }
+
+                startPlayerTask(
+                    room,
+                    player
+                );
+            }
+        );
+
+        socket.on(
+            "cancelTask",
+            () => {
+                const room =
+                    getRoom(
+                        socket.id
+                    );
+
+                if (!room) {
+                    return;
+                }
+
+                const player =
+                    room.players[
+                        socket.id
+                    ];
+
+                if (!player) {
+                    return;
+                }
+
+                player.task = null;
             }
         );
 
         socket.on(
             "hireBot",
             job => {
-
                 const room =
-                    getRoomForSocket(
+                    getRoom(
                         socket.id
                     );
 
@@ -1296,7 +1308,13 @@ io.on(
                 }
 
                 if (
-                    !JOBS.includes(job)
+                    !BOT_JOBS.includes(job)
+                ) {
+                    return;
+                }
+
+                if (
+                    room.money < 50
                 ) {
                     return;
                 }
@@ -1310,19 +1328,13 @@ io.on(
                     return;
                 }
 
-                if (
-                    room.money < 50
-                ) {
-                    return;
-                }
-
                 room.money -= 50;
 
                 const id =
-                    `bot-${room.nextBotId++}`;
+                    "bot-" +
+                    room.nextBotId++;
 
                 room.bots[id] = {
-
                     id,
 
                     name:
@@ -1337,24 +1349,18 @@ io.on(
 
                     y: 700,
 
-                    job,
-
-                    actionTimer: 0
-
+                    job
                 };
 
-                broadcastRoom(
-                    room
-                );
+                broadcast(room);
             }
         );
 
         socket.on(
             "upgrade",
             type => {
-
                 const room =
-                    getRoomForSocket(
+                    getRoom(
                         socket.id
                     );
 
@@ -1370,47 +1376,41 @@ io.on(
                     room.money >= 250 &&
                     room.upgrades.pumps < 4
                 ) {
-
                     room.money -= 250;
 
                     room.upgrades.pumps++;
                 }
 
-                else if (
+                if (
                     type === "shelves" &&
                     room.money >= 200
                 ) {
-
                     room.money -= 200;
 
-                    room.upgrades.storeShelves++;
+                    room.upgrades.shelves++;
 
                     room.maxStoreStock += 20;
                 }
 
-                else if (
+                if (
                     type === "employees" &&
                     room.money >= 300 &&
                     room.upgrades.employeeSlots < 6
                 ) {
-
                     room.money -= 300;
 
                     room.upgrades.employeeSlots++;
                 }
 
-                broadcastRoom(
-                    room
-                );
+                broadcast(room);
             }
         );
 
         socket.on(
             "disconnect",
             () => {
-
                 const room =
-                    getRoomForSocket(
+                    getRoom(
                         socket.id
                     );
 
@@ -1422,29 +1422,21 @@ io.on(
                     socket.id
                 ];
 
-                socket.leave(
-                    room.code
-                );
-
                 if (
-                    socket.id ===
-                    room.hostId
+                    room.hostId ===
+                    socket.id
                 ) {
-
                     const remaining =
                         Object.keys(
                             room.players
                         );
 
                     if (
-                        remaining.length > 0
+                        remaining.length
                     ) {
-
                         room.hostId =
                             remaining[0];
-
                     } else {
-
                         delete rooms[
                             room.code
                         ];
@@ -1453,124 +1445,32 @@ io.on(
                     }
                 }
 
-                broadcastRoom(
-                    room
-                );
+                broadcast(room);
             }
         );
     }
 );
 
-function joinRoom(
-    socket,
-    room,
-    name
-) {
-
-    const playerIndex =
-        Object.keys(
-            room.players
-        ).length;
-
-    socket.join(
-        room.code
-    );
-
-    room.players[
-        socket.id
-    ] = {
-
-        id:
-            socket.id,
-
-        name:
-            sanitizeName(name),
-
-        x:
-            620 +
-            playerIndex * 35,
-
-        y:
-            650,
-
-        color:
-            PLAYER_COLORS[
-                playerIndex
-            ],
-
-        action:
-            "idle",
-
-        speed:
-            3
-
-    };
-
-    socket.emit(
-        "roomJoined",
-        {
-
-            roomCode:
-                room.code,
-
-            hostId:
-                room.hostId,
-
-            playerId:
-                socket.id
-
-        }
-    );
-
-    broadcastRoom(
-        room
-    );
-}
-
 setInterval(
     () => {
-
         for (
             const room of
             Object.values(rooms)
         ) {
-
-            if (
-                !room.started
-            ) {
-                continue;
-            }
-
-            updateCustomers(
-                room
-            );
-
-            updateBots(
-                room
-            );
-
-            updateTime(
-                room
-            );
+            updateWorld(room);
         }
-
     },
     1000 / TICK_RATE
 );
 
 setInterval(
     () => {
-
         for (
             const room of
             Object.values(rooms)
         ) {
-
-            broadcastRoom(
-                room
-            );
+            broadcast(room);
         }
-
     },
     1000 / STATE_RATE
 );
@@ -1578,7 +1478,6 @@ setInterval(
 app.get(
     "/",
     (req, res) => {
-
         res.sendFile(
             path.join(
                 __dirname,
@@ -1591,9 +1490,8 @@ app.get(
 server.listen(
     PORT,
     () => {
-
         console.log(
-            `Octane server running on port ${PORT}`
+            `Octane running on port ${PORT}`
         );
     }
 );
