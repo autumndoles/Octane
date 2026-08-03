@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Octane</title>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: white;
+}
+
+#gameCanvas {
+    display: block;
+    background: #20252b;
+}
+
+#hud {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.75);
+    padding: 15px;
+    border-radius: 10px;
+    min-width: 230px;
+    z-index: 10;
+}
+
+#hud h1 {
+    margin: 0 0 10px;
+    font-size: 26px;
+}
+
+.stat {
+    margin: 5px 0;
+}
+
+#login {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #111;
+    z-index: 100;
+}
+
+.loginBox {
+    background: #222;
+    padding: 35px;
+    border-radius: 15px;
+    text-align: center;
+    width: 320px;
+}
+
+.loginBox h1 {
+    font-size: 42px;
+    margin-top: 0;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 6px;
+    border: none;
+    font-size: 16px;
+}
+
+button {
+    padding: 10px 15px;
+    margin: 4px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    filter: brightness(1.2);
+}
+
+#jobs {
+    position: fixed;
+    right: 10px;
+    top: 10px;
+    background: rgba(0,0,0,0.75);
+    padding: 10px;
+    border-radius: 10px;
+    z-index: 10;
+}
+
+#upgrades {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.8);
+    padding: 10px;
+    border-radius: 10px;
+    z-index: 10;
+}
+
+#message {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    padding: 12px 20px;
+    border-radius: 10px;
+    display: none;
+    z-index: 20;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="login">
+
+    <div class="loginBox">
+
+        <h1>⛽ Octane</h1>
+
+        <p>
+            Run the station.
+            Keep the pumps flowing.
+        </p>
+
+        <input
+            id="nameInput"
+            placeholder="Your name"
+            maxlength="20"
+        >
+
+        <button onclick="joinGame()">
+            Start Working
+        </button>
+
+    </div>
+
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="hud">
+
+    <h1>⛽ Octane</h1>
+
+    <div class="stat">
+        💰 Money:
+        $<span id="money">0</span>
+    </div>
+
+    <div class="stat">
+        ⛽ Fuel:
+        <span id="fuel">0</span>
+    </div>
+
+    <div class="stat">
+        🛒 Stock:
+        <span id="stock">0</span>
+    </div>
+
+    <div class="stat">
+        🧹 Clean:
+        <span id="clean">0</span>%
+    </div>
+
+    <div class="stat">
+        📅 Day:
+        <span id="day">1</span>
+    </div>
+
+    <div class="stat">
+        🕐 Time:
+        <span id="time">08:00</span>
+    </div>
+
+</div>
+
+<div id="jobs">
+
+    <b>Job</b>
+
+    <br>
+
+    <button onclick="setJob('fuel')">
+        ⛽ Fuel
+    </button>
+
+    <button onclick="setJob('cashier')">
+        💵 Cashier
+    </button>
+
+    <button onclick="setJob('restock')">
+        📦 Restock
+    </button>
+
+    <button onclick="setJob('clean')">
+        🧹 Clean
+    </button>
+
+    <button onclick="setJob('idle')">
+        💤 Idle
+    </button>
+
+</div>
+
+<div id="upgrades">
+
+    <b>Upgrades</b>
+
+    <br>
+
+    <button onclick="buyUpgrade('fuelCapacity')">
+        Bigger Fuel Tank ($500)
+    </button>
+
+    <button onclick="buyUpgrade('storeCapacity')">
+        Bigger Store ($400)
+    </button>
+
+    <button onclick="buyUpgrade('cleanliness')">
+        Deep Clean ($300)
+    </button>
+
+</div>
+
+<div id="message"></div>
+
+<script>
+
+const socket = io();
+
+const canvas =
+    document.getElementById("gameCanvas");
+
+const ctx =
+    canvas.getContext("2d");
+
+let myId = null;
+
+let gameState = {
+    players: {},
+    bots: {},
+    customers: {}
+};
+
+const keys = {};
+
+window.addEventListener("keydown", e => {
+
+    keys[e.key.toLowerCase()] = true;
+
+    if (e.key.toLowerCase() === "e") {
+        socket.emit("interact");
+    }
+
+});
+
+window.addEventListener("keyup", e => {
+
+    keys[e.key.toLowerCase()] = false;
+
+});
+
+function resizeCanvas() {
+
+    canvas.width =
+        window.innerWidth;
+
+    canvas.height =
+        window.innerHeight;
+
+}
+
+window.addEventListener(
+    "resize",
+    resizeCanvas
+);
+
+resizeCanvas();
+
+function joinGame() {
+
+    const name =
+        document
+        .getElementById("nameInput")
+        .value
+        .trim();
+
+    if (!name) {
+
+        showMessage(
+            "Enter a name first!"
+        );
+
+        return;
+
+    }
+
+    socket.emit(
+        "joinGame",
+        name
+    );
+
+    document
+        .getElementById("login")
+        .style.display = "none";
+
+}
+
+socket.on("joined", data => {
+
+    myId = data.id;
+
+});
+
+socket.on("gameState", state => {
+
+    gameState = state;
+
+    document
+        .getElementById("money")
+        .textContent =
+        state.money;
+
+    document
+        .getElementById("fuel")
+        .textContent =
+        `${state.fuel}/${state.fuelCapacity}`;
+
+    document
+        .getElementById("stock")
+        .textContent =
+        `${state.storeStock}/${state.storeCapacity}`;
+
+    document
+        .getElementById("clean")
+        .textContent =
+        state.cleanliness;
+
+    document
+        .getElementById("day")
+        .textContent =
+        state.day;
+
+    const hours =
+        Math.floor(state.time / 60);
+
+    const minutes =
+        Math.floor(state.time % 60);
+
+    document
+        .getElementById("time")
+        .textContent =
+        String(hours).padStart(2, "0")
+        + ":" +
+        String(minutes).padStart(2, "0");
+
+});
+
+function setJob(job) {
+
+    socket.emit(
+        "setJob",
+        job
+    );
+
+    showMessage(
+        "Job changed to " + job
+    );
+
+}
+
+function buyUpgrade(upgrade) {
+
+    socket.emit(
+        "buyUpgrade",
+        upgrade
+    );
+
+}
+
+function showMessage(text) {
+
+    const message =
+        document.getElementById("message");
+
+    message.textContent =
+        text;
+
+    message.style.display =
+        "block";
+
+    setTimeout(() => {
+
+        message.style.display =
+            "none";
+
+    }, 2000);
+
+}
+
+function sendMovement() {
+
+    socket.emit(
+        "move",
+        {
+            up: keys["w"] ||
+                keys["arrowup"],
+
+            down: keys["s"] ||
+                keys["arrowdown"],
+
+            left: keys["a"] ||
+                keys["arrowleft"],
+
+            right: keys["d"] ||
+                keys["arrowright"]
+        }
+    );
+
+}
+
+setInterval(
+    sendMovement,
+    50
+);
+
+function drawStation() {
+
+    ctx.fillStyle =
+        "#20252b";
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    // Roads
+
+    ctx.fillStyle =
+        "#333";
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        180
+    );
+
+    ctx.fillRect(
+        0,
+        canvas.height - 130,
+        canvas.width,
+        130
+    );
+
+    // Station building
+
+    ctx.fillStyle =
+        "#555";
+
+    ctx.fillRect(
+        350,
+        100,
+        400,
+        400
+    );
+
+    // Roof
+
+    ctx.fillStyle =
+        "#e33";
+
+    ctx.fillRect(
+        350,
+        100,
+        400,
+        70
+    );
+
+    ctx.fillStyle =
+        "white";
+
+    ctx.font =
+        "bold 32px Arial";
+
+    ctx.textAlign =
+        "center";
+
+    ctx.fillText(
+        "OCTANE",
+        550,
+        145
+    );
+
+    // Store
+
+    ctx.fillStyle =
+        "#ddd";
+
+    ctx.fillRect(
+        400,
+        200,
+        300,
+        180
+    );
+
+    ctx.fillStyle =
+        "#222";
+
+    ctx.font =
+        "20px Arial";
+
+    ctx.fillText(
+        "CONVENIENCE STORE",
+        550,
+        235
+    );
+
+    // Register
+
+    ctx.fillStyle =
+        "#333";
+
+    ctx.fillRect(
+        480,
+        260,
+        140,
+        60
+    );
+
+    ctx.fillStyle =
+        "white";
+
+    ctx.fillText(
+        "REGISTER",
+        550,
+        297
+    );
+
+    // Fuel pumps
+
+    for (
+        let i = 0;
+        i < 4;
+        i++
+    ) {
+
+        const x =
+            800 + i * 90;
+
+        ctx.fillStyle =
+            "#444";
+
+        ctx.fillRect(
+            x,
+            170,
+            60,
+            100
+        );
+
+        ctx.fillStyle =
+            "#e33";
+
+        ctx.fillRect(
+            x + 10,
+            180,
+            40,
+            30
+        );
+
+        ctx.fillStyle =
+            "white";
+
+        ctx.font =
+            "14px Arial";
+
+        ctx.fillText(
+            "PUMP",
+            x + 30,
+            230
+        );
+
+    }
+
+    // Restock area
+
+    ctx.fillStyle =
+        "#8b5a2b";
+
+    ctx.fillRect(
+        150,
+        420,
+        180,
+        120
+    );
+
+    ctx.fillStyle =
+        "white";
+
+    ctx.fillText(
+        "RESTOCK",
+        240,
+        485
+    );
+
+    // Cleaning area
+
+    ctx.fillStyle =
+        "#2288aa";
+
+    ctx.fillRect(
+        400,
+        530,
+        300,
+        80
+    );
+
+    ctx.fillStyle =
+        "white";
+
+    ctx.fillText(
+        "CLEANING AREA",
+        550,
+        575
+    );
+
+}
+
+function drawEntity(
+    entity,
+    color,
+    label
+) {
+
+    ctx.fillStyle =
+        color;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        entity.x,
+        entity.y,
+        15,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.fillStyle =
+        "white";
+
+    ctx.font =
+        "12px Arial";
+
+    ctx.textAlign =
+        "center";
+
+    ctx.fillText(
+        label,
+        entity.x,
+        entity.y - 22
+    );
+
+}
+
+function drawCustomers() {
+
+    for (
+        const customer of
+        Object.values(
+            gameState.customers || {}
+        )
+    ) {
+
+        drawEntity(
+            customer,
+            "#ffaa22",
+            "Customer"
+        );
+
+    }
+
+}
+
+function drawBots() {
+
+    for (
+        const bot of
+        Object.values(
+            gameState.bots || {}
+        )
+    ) {
+
+        drawEntity(
+            bot,
+            bot.color,
+            `🤖 ${bot.name}`
+        );
+
+    }
+
+}
+
+function drawPlayers() {
+
+    for (
+        const player of
+        Object.values(
+            gameState.players || {}
+        )
+    ) {
+
+        drawEntity(
+            player,
+            player.color,
+            player.name
+        );
+
+    }
+
+}
+
+function gameLoop() {
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    drawStation();
+
+    drawCustomers();
+
+    drawBots();
+
+    drawPlayers();
+
+    requestAnimationFrame(
+        gameLoop
+    );
+
+}
+
+gameLoop();
+
+</script>
+
+</body>
+</html>
