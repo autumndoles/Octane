@@ -1,15 +1,14 @@
-
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
 
 <meta
     name="viewport"
     content="width=device-width,
-             initial-scale=1.0,
-             maximum-scale=1.0,
+             initial-scale=1,
+             maximum-scale=1,
              user-scalable=no"
 >
 
@@ -19,6 +18,7 @@
 
 * {
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -42,22 +42,50 @@ body {
         Arial,
         sans-serif;
 
-    touch-action: none;
+    user-select: none;
 
 }
 
-button,
-input {
+body {
 
-    font-family:
-        Arial,
-        sans-serif;
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
 
 }
 
-button {
 
-    cursor: pointer;
+/* =====================================================
+   MAIN GAME
+===================================================== */
+
+#gameWrapper {
+
+    position: relative;
+
+    width: min(
+        100vw,
+        calc(100vh * 16 / 9)
+    );
+
+    aspect-ratio: 16 / 9;
+
+}
+
+
+#game {
+
+    width: 100%;
+
+    height: 100%;
+
+    display: block;
+
+    image-rendering: pixelated;
+
+    background: #222;
 
 }
 
@@ -68,66 +96,39 @@ button {
 
 #menu {
 
-    position: fixed;
+    position: absolute;
 
     inset: 0;
 
-    display: flex;
+    background: #171717;
 
-    align-items: center;
+    display: flex;
 
     justify-content: center;
 
-    background:
-        linear-gradient(
-            135deg,
-            #111,
-            #1b1b1b
-        );
+    align-items: center;
 
-    z-index: 10;
+    z-index: 20;
 
 }
 
 
 .menuBox {
 
-    width: min(
-        90vw,
-        420px
-    );
+    width: 90%;
 
-    padding: 30px;
-
-    background: #222;
-
-    border:
-        1px solid
-        #444;
-
-    border-radius: 14px;
+    max-width: 360px;
 
     text-align: center;
-
-    box-shadow:
-        0 10px 40px
-        rgba(
-            0,
-            0,
-            0,
-            0.5
-        );
 
 }
 
 
 .logo {
 
-    font-size: 48px;
+    font-size: 42px;
 
     font-weight: bold;
-
-    letter-spacing: 3px;
 
     margin-bottom: 5px;
 
@@ -151,11 +152,11 @@ input {
 
     margin-bottom: 10px;
 
-    border: none;
+    border: 0;
 
-    border-radius: 7px;
+    border-radius: 6px;
 
-    background: #333;
+    background: #292929;
 
     color: white;
 
@@ -163,106 +164,79 @@ input {
 
     outline: none;
 
+    text-align: center;
+
 }
 
 
-.menuButton {
+button {
 
     width: 100%;
 
     padding: 13px;
 
-    margin-top: 8px;
+    margin-top: 7px;
 
-    border: none;
+    border: 0;
 
-    border-radius: 7px;
+    border-radius: 6px;
 
-    background: #e63946;
+    background: #f5a623;
 
-    color: white;
+    color: #111;
+
+    font-weight: bold;
 
     font-size: 16px;
 
-    font-weight: bold;
+    cursor: pointer;
 
 }
 
 
-.menuButton:hover {
+button:active {
 
-    filter:
-        brightness(1.15);
+    transform:
+        translateY(1px);
 
 }
 
 
 #roomCodeDisplay {
 
-    margin-top: 20px;
-
-    padding: 15px;
-
-    background: #333;
-
-    border-radius: 8px;
-
     display: none;
+
+    margin-top: 15px;
+
+    padding: 12px;
+
+    background: #252525;
+
+    border-radius: 6px;
 
 }
 
 
 #roomCode {
 
-    font-size: 32px;
+    font-size: 28px;
 
     font-weight: bold;
 
     letter-spacing: 5px;
 
-}
-
-
-#startButton {
-
-    display: none;
+    color: #f5a623;
 
 }
 
 
-/* =====================================================
-   GAME
-===================================================== */
+#error {
 
-#game {
+    color: #ff6b6b;
 
-    display: none;
+    margin-top: 10px;
 
-    position: fixed;
-
-    inset: 0;
-
-}
-
-
-#gameCanvas {
-
-    position: absolute;
-
-    left: 50%;
-
-    top: 50%;
-
-    transform:
-        translate(
-            -50%,
-            -50%
-        );
-
-    background: #78a85a;
-
-    image-rendering:
-        pixelated;
+    min-height: 18px;
 
 }
 
@@ -273,23 +247,21 @@ input {
 
 #hud {
 
-    position: fixed;
+    position: absolute;
 
-    top: 10px;
+    top: 5px;
 
-    left: 10px;
+    left: 5px;
 
-    right: 10px;
+    right: 5px;
 
     display: flex;
 
     justify-content: space-between;
 
-    align-items: flex-start;
-
     pointer-events: none;
 
-    z-index: 2;
+    z-index: 5;
 
 }
 
@@ -304,125 +276,69 @@ input {
             0.75
         );
 
-    border-radius: 8px;
+    padding: 5px 8px;
 
-    padding: 9px 12px;
+    border-radius: 4px;
 
-    font-size: 14px;
-
-}
-
-
-#stats {
-
-    line-height: 1.6;
+    font-size: 11px;
 
 }
 
 
 #actions {
 
-    pointer-events: auto;
+    position: absolute;
 
-    display: flex;
+    right: 8px;
 
-    gap: 6px;
+    top: 35px;
 
-    flex-wrap: wrap;
+    width: 120px;
 
-    justify-content: flex-end;
-
-}
-
-
-.actionButton {
-
-    border: none;
-
-    border-radius: 6px;
-
-    padding:
-        8px
-        10px;
-
-    background: #333;
-
-    color: white;
-
-    font-weight: bold;
+    z-index: 6;
 
 }
 
 
-.actionButton:hover {
+#actions button {
 
-    background: #444;
+    font-size: 11px;
+
+    padding: 7px;
+
+    margin-bottom: 4px;
 
 }
 
 
 /* =====================================================
-   TASK MESSAGE
+   MOBILE CONTROLS
 ===================================================== */
 
-#taskMessage {
+#mobileControls {
 
-    position: fixed;
+    position: absolute;
 
-    left: 50%;
-
-    bottom: 25px;
-
-    transform:
-        translateX(-50%);
-
-    padding:
-        10px
-        16px;
-
-    background:
-        rgba(
-            0,
-            0,
-            0,
-            0.8
-        );
-
-    border-radius: 8px;
-
-    font-size: 14px;
+    inset: 0;
 
     pointer-events: none;
 
-    z-index: 3;
-
-    text-align: center;
-
-}
-
-
-/* =====================================================
-   CONTROLS
-===================================================== */
-
-#controls {
-
-    position: fixed;
-
-    bottom: 15px;
-
-    left: 15px;
-
-    z-index: 4;
+    z-index: 10;
 
 }
 
 
 #joystick {
 
-    width: 130px;
+    position: absolute;
 
-    height: 130px;
+    left: 15px;
+
+    bottom: 15px;
+
+    width: 100px;
+
+    height: 100px;
 
     border-radius: 50%;
 
@@ -434,16 +350,7 @@ input {
             0.12
         );
 
-    border:
-        2px solid
-        rgba(
-            255,
-            255,
-            255,
-            0.2
-        );
-
-    position: relative;
+    pointer-events: auto;
 
 }
 
@@ -452,13 +359,13 @@ input {
 
     position: absolute;
 
-    width: 50px;
+    width: 42px;
 
-    height: 50px;
+    height: 42px;
 
-    left: 40px;
+    left: 29px;
 
-    top: 40px;
+    top: 29px;
 
     border-radius: 50%;
 
@@ -467,110 +374,161 @@ input {
             255,
             255,
             255,
-            0.35
+            0.4
         );
 
 }
 
 
-#actButton {
+#interactButton {
 
-    position: fixed;
+    position: absolute;
 
-    right: 25px;
+    right: 20px;
 
-    bottom: 30px;
+    bottom: 25px;
 
-    width: 80px;
+    width: 75px;
 
-    height: 80px;
+    height: 75px;
 
     border-radius: 50%;
 
-    border: none;
+    background:
+        rgba(
+            245,
+            166,
+            35,
+            0.8
+        );
 
-    background: #e63946;
+    display: flex;
 
-    color: white;
+    align-items: center;
 
-    font-size: 18px;
+    justify-content: center;
 
     font-weight: bold;
 
-    z-index: 4;
+    pointer-events: auto;
 
 }
 
 
-#actButton:active {
-
-    transform:
-        scale(0.94);
-
-}
-
-
-/* =====================================================
-   MOBILE
-===================================================== */
-
-@media (
-    max-width: 600px
+@media
+(
+    min-width: 700px
 ) {
 
-    .logo {
+    #mobileControls {
 
-        font-size: 38px;
-
-    }
-
-
-    #hud {
-
-        font-size: 11px;
-
-    }
-
-
-    .hudPanel {
-
-        padding:
-            6px
-            8px;
-
-    }
-
-
-    #actions {
-
-        max-width:
-            180px;
-
-    }
-
-
-    .actionButton {
-
-        font-size: 11px;
-
-        padding:
-            6px
-            7px;
+        display: none;
 
     }
 
 }
 
 </style>
-
 </head>
 
 <body>
 
 
-<!-- =================================================
+<div id="gameWrapper">
+
+
+<canvas
+    id="game"
+    width="480"
+    height="270"
+></canvas>
+
+
+<!-- =====================================================
+     HUD
+===================================================== -->
+
+<div id="hud">
+
+    <div
+        class="hudPanel"
+        id="stats"
+    >
+        $100
+    </div>
+
+    <div
+        class="hudPanel"
+        id="stationStats"
+    >
+        Fuel: 50 | Stock: 20
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     ACTIONS
+===================================================== -->
+
+<div id="actions">
+
+    <button
+        onclick="hireBot()"
+    >
+        Hire Employee ($50)
+    </button>
+
+    <button
+        onclick="upgrade('pump')"
+    >
+        Upgrade Pump ($250)
+    </button>
+
+    <button
+        onclick="upgrade('shelves')"
+    >
+        Upgrade Shelves ($200)
+    </button>
+
+    <button
+        onclick="upgrade('employees')"
+    >
+        More Employees ($300)
+    </button>
+
+</div>
+
+
+<!-- =====================================================
+     MOBILE CONTROLS
+===================================================== -->
+
+<div id="mobileControls">
+
+    <div
+        id="joystick"
+    >
+
+        <div
+            id="joystickKnob"
+        ></div>
+
+    </div>
+
+
+    <div
+        id="interactButton"
+    >
+        ACT
+    </div>
+
+</div>
+
+
+<!-- =====================================================
      MENU
-================================================= -->
+===================================================== -->
 
 <div id="menu">
 
@@ -581,7 +539,7 @@ input {
         </div>
 
         <div class="subtitle">
-            Run the station. Together.
+            Run the station together.
         </div>
 
 
@@ -593,17 +551,18 @@ input {
 
 
         <button
-            class="menuButton"
-            id="createButton"
+            onclick="createRoom()"
         >
             Create Station
         </button>
 
 
-        <div style="
-            margin: 15px 0;
-            color: #777;
-        ">
+        <div
+            style="
+                margin:12px 0;
+                color:#777;
+            "
+        >
             OR
         </div>
 
@@ -616,182 +575,69 @@ input {
 
 
         <button
-            class="menuButton"
-            id="joinButton"
+            onclick="joinRoom()"
         >
             Join Station
         </button>
 
 
-        <div id="roomCodeDisplay">
+        <div
+            id="roomCodeDisplay"
+        >
 
-            <div>
-                Your station code:
+            Give this code to your friends:
+
+            <div
+                id="roomCode"
+            >
             </div>
 
-            <div id="roomCode">
-                ----
-            </div>
-
-            <div style="
-                margin-top: 10px;
-                color: #aaa;
-                font-size: 13px;
-            ">
-                Give this code to your friends.
-            </div>
+            <button
+                onclick="startGame()"
+            >
+                Start Shift
+            </button>
 
         </div>
 
 
-        <button
-            class="menuButton"
-            id="startButton"
-        >
-            Start Shift
-        </button>
-
-
         <div
-            id="menuMessage"
-            style="
-                margin-top: 15px;
-                color: #ff8888;
-                font-size: 14px;
-            "
-        ></div>
+            id="error"
+        >
+        </div>
 
     </div>
 
 </div>
 
 
-<!-- =================================================
-     GAME
-================================================= -->
-
-<div id="game">
-
-    <canvas
-        id="gameCanvas"
-        width="960"
-        height="540"
-    ></canvas>
-
-
-    <!-- HUD -->
-
-    <div id="hud">
-
-        <div
-            class="hudPanel"
-            id="stats"
-        >
-            Money: $100<br>
-            Fuel: 50<br>
-            Stock: 20<br>
-            Clean: 100%
-        </div>
-
-
-        <div
-            class="hudPanel"
-            id="actions"
-        >
-
-            <button
-                class="actionButton"
-                id="hireButton"
-            >
-                Hire Employee ($50)
-            </button>
-
-
-            <button
-                class="actionButton"
-                id="pumpUpgrade"
-            >
-                Pump ($250)
-            </button>
-
-
-            <button
-                class="actionButton"
-                id="shelfUpgrade"
-            >
-                Shelves ($200)
-            </button>
-
-
-            <button
-                class="actionButton"
-                id="employeeUpgrade"
-            >
-                Employee Slot ($300)
-            </button>
-
-        </div>
-
-    </div>
-
-
-    <div id="taskMessage">
-        Walk around the station and press ACT near something that needs doing.
-    </div>
-
-
-    <!-- MOBILE CONTROLS -->
-
-    <div id="controls">
-
-        <div id="joystick">
-
-            <div id="joystickKnob"></div>
-
-        </div>
-
-    </div>
-
-
-    <button id="actButton">
-        ACT
-    </button>
-
 </div>
 
 
-<script
-    src="/socket.io/socket.io.js"
-></script>
-
+<script src="/socket.io/socket.io.js"></script>
 
 <script>
 
 /* =====================================================
-   SOCKET
+   CONNECTION
 ===================================================== */
 
 const socket =
-    io();
+    io(
+        {
+            transports:
+                ["websocket"]
+        }
+    );
 
 
 /* =====================================================
-   ELEMENTS
+   CANVAS
 ===================================================== */
-
-const menu =
-    document.getElementById(
-        "menu"
-    );
-
-const game =
-    document.getElementById(
-        "game"
-    );
 
 const canvas =
     document.getElementById(
-        "gameCanvas"
+        "game"
     );
 
 const ctx =
@@ -799,60 +645,31 @@ const ctx =
         "2d"
     );
 
-const nameInput =
-    document.getElementById(
-        "nameInput"
-    );
 
-const roomInput =
-    document.getElementById(
-        "roomInput"
-    );
-
-const roomCodeDisplay =
-    document.getElementById(
-        "roomCodeDisplay"
-    );
-
-const roomCode =
-    document.getElementById(
-        "roomCode"
-    );
-
-const startButton =
-    document.getElementById(
-        "startButton"
-    );
-
-const menuMessage =
-    document.getElementById(
-        "menuMessage"
-    );
-
-const stats =
-    document.getElementById(
-        "stats"
-    );
-
-const taskMessage =
-    document.getElementById(
-        "taskMessage"
-    );
+ctx.imageSmoothingEnabled =
+    false;
 
 
 /* =====================================================
    GAME STATE
 ===================================================== */
 
-let myId =
+let state =
     null;
 
-let currentRoom =
+let playerId =
     null;
 
-let gameStarted =
+let roomCode =
+    null;
+
+let isHost =
     false;
 
+
+/* =====================================================
+   LOCAL INPUT
+===================================================== */
 
 const input = {
 
@@ -872,357 +689,365 @@ const input = {
 
 
 /* =====================================================
-   CREATE ROOM
+   INPUT SENDING
 ===================================================== */
 
-document
-    .getElementById(
-        "createButton"
-    )
-    .onclick =
-    () => {
-
-        const name =
-            nameInput.value
-                .trim();
+let lastInput =
+    "";
 
 
-        if (
-            !name
-        ) {
+function sendInput() {
 
-            menuMessage.textContent =
-                "Enter your name first.";
-
-            return;
-
-        }
-
-
-        socket.emit(
-            "createRoom",
-            name
+    const current =
+        JSON.stringify(
+            input
         );
 
-    };
+
+    if (
+        current !==
+        lastInput
+    ) {
+
+        socket.emit(
+            "input",
+            input
+        );
+
+        lastInput =
+            current;
+
+    }
+
+}
 
 
 /* =====================================================
-   JOIN ROOM
+   KEYBOARD
 ===================================================== */
 
-document
-    .getElementById(
-        "joinButton"
-    )
-    .onclick =
-    () => {
+const keys = {
 
-        const name =
-            nameInput.value
-                .trim();
+    w:
+        "up",
 
-        const code =
-            roomInput.value
-                .trim()
-                .toUpperCase();
+    ArrowUp:
+        "up",
+
+    s:
+        "down",
+
+    ArrowDown:
+        "down",
+
+    a:
+        "left",
+
+    ArrowLeft:
+        "left",
+
+    d:
+        "right",
+
+    ArrowRight:
+        "right"
+
+};
+
+
+window.addEventListener(
+    "keydown",
+    e => {
+
+        const direction =
+            keys[
+                e.key
+            ];
 
 
         if (
-            !name
+            direction
         ) {
 
-            menuMessage.textContent =
-                "Enter your name first.";
+            input[
+                direction
+            ] =
+                true;
 
-            return;
+            sendInput();
+
+            e.preventDefault();
 
         }
 
 
         if (
-            code.length !== 4
+            e.key ===
+            "e" ||
+
+            e.key ===
+            " "
         ) {
 
-            menuMessage.textContent =
-                "Enter a 4-character room code.";
+            interact();
 
-            return;
+            e.preventDefault();
 
         }
 
+    }
+);
 
-        socket.emit(
-            "joinRoom",
-            {
 
-                name,
+window.addEventListener(
+    "keyup",
+    e => {
 
-                code
+        const direction =
+            keys[
+                e.key
+            ];
 
-            }
-        );
 
-    };
+        if (
+            direction
+        ) {
+
+            input[
+                direction
+            ] =
+                false;
+
+            sendInput();
+
+            e.preventDefault();
+
+        }
+
+    }
+);
 
 
 /* =====================================================
-   JOINED
+   MENU FUNCTIONS
+===================================================== */
+
+function getName() {
+
+    return (
+        document
+            .getElementById(
+                "nameInput"
+            )
+            .value
+            .trim()
+        ||
+        "Player"
+    );
+
+}
+
+
+function createRoom() {
+
+    socket.emit(
+        "createRoom",
+        getName()
+    );
+
+}
+
+
+function joinRoom() {
+
+    const code =
+        document
+            .getElementById(
+                "roomInput"
+            )
+            .value
+            .trim()
+            .toUpperCase();
+
+
+    if (
+        code.length !==
+        4
+    ) {
+
+        showError(
+            "Enter a 4-character room code."
+        );
+
+        return;
+
+    }
+
+
+    socket.emit(
+        "joinRoom",
+        {
+
+            code,
+
+            name:
+                getName()
+
+        }
+    );
+
+}
+
+
+function startGame() {
+
+    socket.emit(
+        "startGame"
+    );
+
+}
+
+
+function showError(
+    message
+) {
+
+    document
+        .getElementById(
+            "error"
+        )
+        .textContent =
+        message;
+
+}
+
+
+/* =====================================================
+   SOCKET EVENTS
 ===================================================== */
 
 socket.on(
     "joined",
     data => {
 
-        myId =
+        playerId =
             data.playerId;
 
-
-        roomCode.textContent =
+        roomCode =
             data.roomCode;
 
-
-        roomCodeDisplay.style.display =
-            "block";
-
-
-        startButton.style.display =
-            "block";
+        isHost =
+            data.isHost;
 
 
         document
             .getElementById(
-                "createButton"
+                "roomCode"
             )
-            .style.display =
-            "none";
+            .textContent =
+            roomCode;
 
 
         document
             .getElementById(
-                "joinButton"
+                "roomCodeDisplay"
             )
             .style.display =
-            "none";
+            "block";
 
 
-        nameInput.style.display =
-            "none";
+        if (
+            !isHost
+        ) {
 
+            document
+                .querySelector(
+                    "#roomCodeDisplay button"
+                )
+                .style.display =
+                "none";
 
-        roomInput.style.display =
-            "none";
+        }
 
     }
 );
 
-
-/* =====================================================
-   ERROR
-===================================================== */
 
 socket.on(
     "errorMessage",
     message => {
 
-        menuMessage.textContent =
-            message;
+        showError(
+            message
+        );
 
     }
 );
 
 
-/* =====================================================
-   START
-===================================================== */
-
-startButton.onclick =
-    () => {
-
-        socket.emit(
-            "startGame"
-        );
-
-    };
-
-
-/* =====================================================
-   STATE
-===================================================== */
-
 socket.on(
     "state",
-    state => {
+    newState => {
 
-        currentRoom =
-            state;
-
-
-        if (
-            state.started &&
-            !gameStarted
-        ) {
-
-            gameStarted =
-                true;
-
-            menu.style.display =
-                "none";
-
-            game.style.display =
-                "block";
-
-        }
+        state =
+            newState;
 
 
         updateHUD();
 
-        updateTaskMessage();
-
     }
 );
 
 
 /* =====================================================
-   INPUT
+   HUD
 ===================================================== */
 
-function sendInput() {
+function updateHUD() {
 
-    socket.emit(
-        "input",
-        input
-    );
+    if (
+        !state
+    ) {
+
+        return;
+
+    }
+
+
+    document
+        .getElementById(
+            "stats"
+        )
+        .textContent =
+        "$" +
+        state.money;
+
+
+    document
+        .getElementById(
+            "stationStats"
+        )
+        .textContent =
+
+        "Fuel: " +
+        state.fuel +
+        "/" +
+        state.maxFuel +
+
+        " | Stock: " +
+        state.stock +
+        "/" +
+        state.maxStock +
+
+        " | Clean: " +
+        state.cleanliness +
+        "%";
 
 }
 
 
-document.addEventListener(
-    "keydown",
-    event => {
-
-        if (
-            event.key ===
-            "w" ||
-            event.key ===
-            "ArrowUp"
-        ) {
-
-            input.up =
-                true;
-
-        }
-
-
-        if (
-            event.key ===
-            "s" ||
-            event.key ===
-            "ArrowDown"
-        ) {
-
-            input.down =
-                true;
-
-        }
-
-
-        if (
-            event.key ===
-            "a" ||
-            event.key ===
-            "ArrowLeft"
-        ) {
-
-            input.left =
-                true;
-
-        }
-
-
-        if (
-            event.key ===
-            "d" ||
-            event.key ===
-            "ArrowRight"
-        ) {
-
-            input.right =
-                true;
-
-        }
-
-
-        sendInput();
-
-    }
-);
-
-
-document.addEventListener(
-    "keyup",
-    event => {
-
-        if (
-            event.key ===
-            "w" ||
-            event.key ===
-            "ArrowUp"
-        ) {
-
-            input.up =
-                false;
-
-        }
-
-
-        if (
-            event.key ===
-            "s" ||
-            event.key ===
-            "ArrowDown"
-        ) {
-
-            input.down =
-                false;
-
-        }
-
-
-        if (
-            event.key ===
-            "a" ||
-            event.key ===
-            "ArrowLeft"
-        ) {
-
-            input.left =
-                false;
-
-        }
-
-
-        if (
-            event.key ===
-            "d" ||
-            event.key ===
-            "ArrowRight"
-        ) {
-
-            input.right =
-                false;
-
-        }
-
-
-        sendInput();
-
-    }
-);
-
-
 /* =====================================================
-   ACT
+   INTERACTION
 ===================================================== */
 
 function interact() {
@@ -1236,845 +1061,47 @@ function interact() {
 
 document
     .getElementById(
-        "actButton"
+        "interactButton"
     )
-    .onclick =
-    interact;
+    .addEventListener(
+        "touchstart",
+        e => {
 
-
-document.addEventListener(
-    "keydown",
-    event => {
-
-        if (
-            event.key ===
-            "e" ||
-            event.key ===
-            " "
-        ) {
-
-            event.preventDefault();
+            e.preventDefault();
 
             interact();
 
+        },
+        {
+            passive:
+                false
         }
-
-    }
-);
+    );
 
 
 /* =====================================================
-   HIRE EMPLOYEE
+   BOT / UPGRADES
 ===================================================== */
 
-document
-    .getElementById(
-        "hireButton"
-    )
-    .onclick =
-    () => {
+function hireBot() {
 
-        socket.emit(
-            "hireBot"
-        );
-
-    };
-
-
-/* =====================================================
-   UPGRADES
-===================================================== */
-
-document
-    .getElementById(
-        "pumpUpgrade"
-    )
-    .onclick =
-    () => {
-
-        socket.emit(
-            "upgrade",
-            "pump"
-        );
-
-    };
-
-
-document
-    .getElementById(
-        "shelfUpgrade"
-    )
-    .onclick =
-    () => {
-
-        socket.emit(
-            "upgrade",
-            "shelves"
-        );
-
-    };
-
-
-document
-    .getElementById(
-        "employeeUpgrade"
-    )
-    .onclick =
-    () => {
-
-        socket.emit(
-            "upgrade",
-            "employees"
-        );
-
-    };
-
-
-/* =====================================================
-   HUD
-===================================================== */
-
-function updateHUD() {
-
-    if (
-        !currentRoom
-    ) {
-
-        return;
-
-    }
-
-
-    stats.innerHTML =
-
-        "Money: $" +
-        currentRoom.money +
-
-        "<br>Fuel: " +
-        currentRoom.fuel +
-        "/" +
-        currentRoom.maxFuel +
-
-        "<br>Stock: " +
-        currentRoom.stock +
-        "/" +
-        currentRoom.maxStock +
-
-        "<br>Clean: " +
-        currentRoom.cleanliness +
-        "%" +
-
-        "<br>Day: " +
-        currentRoom.day;
+    socket.emit(
+        "hireBot"
+    );
 
 }
 
 
-/* =====================================================
-   TASK MESSAGE
-===================================================== */
-
-function updateTaskMessage() {
-
-    if (
-        !currentRoom
-    ) {
-
-        return;
-
-    }
-
-
-    const player =
-        currentRoom.players.find(
-            p =>
-                p.id ===
-                myId
-        );
-
-
-    if (
-        !player
-    ) {
-
-        return;
-
-    }
-
-
-    if (
-        player.task
-    ) {
-
-        const names = {
-
-            fuel:
-                "Fueling a customer...",
-
-            cashier:
-                "Running the register...",
-
-            restock:
-                "Restocking the shelves...",
-
-            clean:
-                "Cleaning the station...",
-
-            delivery:
-                "Refueling the station..."
-
-        };
-
-
-        taskMessage.textContent =
-            names[
-                player.task
-            ] ||
-            "Working...";
-
-
-        return;
-
-    }
-
-
-    taskMessage.textContent =
-        "Walk around the station and press ACT near something that needs doing.";
-
-}
-
-
-/* =====================================================
-   DRAWING
-===================================================== */
-
-function resizeCanvas() {
-
-    const scale =
-        Math.min(
-
-            window.innerWidth /
-                960,
-
-            window.innerHeight /
-                540
-
-        );
-
-
-    canvas.style.width =
-        960 *
-        scale +
-        "px";
-
-
-    canvas.style.height =
-        540 *
-        scale +
-        "px";
-
-}
-
-
-window.addEventListener(
-    "resize",
-    resizeCanvas
-);
-
-
-resizeCanvas();
-
-
-/* =====================================================
-   DRAW STATION
-===================================================== */
-
-function drawStation() {
-
-    ctx.fillStyle =
-        "#78a85a";
-
-    ctx.fillRect(
-        0,
-        0,
-        960,
-        540
-    );
-
-
-    /*
-    Building
-    */
-
-    ctx.fillStyle =
-        "#d8d8d8";
-
-    ctx.fillRect(
-        100,
-        80,
-        500,
-        400
-    );
-
-
-    /*
-    Interior
-    */
-
-    ctx.fillStyle =
-        "#eeeeee";
-
-    ctx.fillRect(
-        120,
-        100,
-        460,
-        360
-    );
-
-
-    /*
-    Register
-    */
-
-    drawStationObject(
-        330,
-        220,
-        80,
-        55,
-        "#8b5a2b",
-        "REGISTER"
-    );
-
-
-    /*
-    Shelves
-    */
-
-    drawStationObject(
-        500,
-        220,
-        80,
-        55,
-        "#6c757d",
-        "SHELVES"
-    );
-
-
-    /*
-    Storage
-    */
-
-    drawStationObject(
-        500,
-        430,
-        80,
-        55,
-        "#795548",
-        "STORAGE"
-    );
-
-
-    /*
-    Cleaning
-    */
-
-    drawStationObject(
-        270,
-        430,
-        80,
-        55,
-        "#219ebc",
-        "CLEAN"
-    );
-
-
-    /*
-    Delivery
-    */
-
-    drawStationObject(
-        720,
-        500,
-        100,
-        40,
-        "#495057",
-        "DELIVERY"
-    );
-
-
-    /*
-    Pumps
-    */
-
-    if (
-        currentRoom
-    ) {
-
-        for (
-            let i = 0;
-            i <
-            currentRoom
-                .upgrades
-                .pumps;
-            i++
-        ) {
-
-            const pump =
-                [
-                    {
-                        x: 700,
-                        y: 170
-                    },
-
-                    {
-                        x: 820,
-                        y: 170
-                    },
-
-                    {
-                        x: 700,
-                        y: 300
-                    },
-
-                    {
-                        x: 820,
-                        y: 300
-                    }
-
-                ][i];
-
-
-            drawStationObject(
-                pump.x,
-                pump.y,
-                55,
-                55,
-                "#343a40",
-                "PUMP"
-            );
-
-        }
-
-    }
-
-}
-
-
-function drawStationObject(
-    x,
-    y,
-    width,
-    height,
-    color,
-    label
+function upgrade(
+    type
 ) {
 
-    ctx.fillStyle =
-        color;
-
-    ctx.fillRect(
-        x -
-            width /
-            2,
-
-        y -
-            height /
-            2,
-
-        width,
-        height
-    );
-
-
-    ctx.fillStyle =
-        "white";
-
-    ctx.font =
-        "10px Arial";
-
-    ctx.textAlign =
-        "center";
-
-    ctx.fillText(
-        label,
-        x,
-        y +
-            4
+    socket.emit(
+        "upgrade",
+        type
     );
 
 }
-
-
-/* =====================================================
-   DRAW PLAYER
-===================================================== */
-
-function drawPlayer(
-    player
-) {
-
-    ctx.beginPath();
-
-    ctx.arc(
-        player.x,
-        player.y,
-        12,
-        0,
-        Math.PI *
-        2
-    );
-
-
-    ctx.fillStyle =
-        player.color;
-
-    ctx.fill();
-
-
-    ctx.strokeStyle =
-        "white";
-
-    ctx.stroke();
-
-
-    ctx.fillStyle =
-        "white";
-
-    ctx.font =
-        "11px Arial";
-
-    ctx.textAlign =
-        "center";
-
-    ctx.fillText(
-        player.name,
-        player.x,
-        player.y -
-            17
-    );
-
-
-    if (
-        player.task
-    ) {
-
-        ctx.font =
-            "9px Arial";
-
-        ctx.fillText(
-            player.task,
-            player.x,
-            player.y +
-                25
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   DRAW BOT
-===================================================== */
-
-function drawBot(
-    bot
-) {
-
-    ctx.beginPath();
-
-    ctx.arc(
-        bot.x,
-        bot.y,
-        11,
-        0,
-        Math.PI *
-        2
-    );
-
-
-    ctx.fillStyle =
-        "#9b5de5";
-
-    ctx.fill();
-
-
-    ctx.strokeStyle =
-        "white";
-
-    ctx.stroke();
-
-
-    ctx.fillStyle =
-        "white";
-
-    ctx.font =
-        "10px Arial";
-
-    ctx.textAlign =
-        "center";
-
-    ctx.fillText(
-        bot.name,
-        bot.x,
-        bot.y -
-            16
-    );
-
-
-    if (
-        bot.task
-    ) {
-
-        ctx.font =
-            "8px Arial";
-
-        ctx.fillText(
-            bot.task,
-            bot.x,
-            bot.y +
-                23
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   DRAW CUSTOMER
-===================================================== */
-
-function drawCustomer(
-    customer
-) {
-
-    ctx.beginPath();
-
-    ctx.arc(
-        customer.x,
-        customer.y,
-        9,
-        0,
-        Math.PI *
-        2
-    );
-
-
-    ctx.fillStyle =
-        customer.state ===
-        "leaving"
-
-            ? "#888"
-
-            : "#f1c40f";
-
-
-    ctx.fill();
-
-
-    ctx.strokeStyle =
-        "#222";
-
-    ctx.stroke();
-
-
-    if (
-        customer.state ===
-        "waitingFuel"
-    ) {
-
-        ctx.fillStyle =
-            "white";
-
-        ctx.font =
-            "9px Arial";
-
-        ctx.textAlign =
-            "center";
-
-        ctx.fillText(
-            "FUEL",
-            customer.x,
-            customer.y -
-                13
-        );
-
-    }
-
-
-    if (
-        customer.state ===
-        "waitingCheckout"
-    ) {
-
-        ctx.fillStyle =
-            "white";
-
-        ctx.font =
-            "9px Arial";
-
-        ctx.textAlign =
-            "center";
-
-        ctx.fillText(
-            "$",
-            customer.x,
-            customer.y -
-                13
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   DRAW TASK
-===================================================== */
-
-function drawTask(
-    task
-) {
-
-    ctx.fillStyle =
-        "#00ffff";
-
-    ctx.beginPath();
-
-    ctx.arc(
-        task.x,
-        task.y,
-        7,
-        0,
-        Math.PI *
-        2
-    );
-
-    ctx.fill();
-
-
-    ctx.fillStyle =
-        "black";
-
-    ctx.font =
-        "9px Arial";
-
-    ctx.textAlign =
-        "center";
-
-    ctx.fillText(
-        "CLEAN",
-        task.x,
-        task.y +
-            3
-    );
-
-}
-
-
-/* =====================================================
-   RENDER
-===================================================== */
-
-function render() {
-
-    if (
-        !currentRoom
-    ) {
-
-        requestAnimationFrame(
-            render
-        );
-
-        return;
-
-    }
-
-
-    ctx.clearRect(
-        0,
-        0,
-        960,
-        540
-    );
-
-
-    drawStation();
-
-
-    /*
-    Cleaning tasks
-    */
-
-    for (
-        const task of
-        currentRoom.tasks
-    ) {
-
-        drawTask(
-            task
-        );
-
-    }
-
-
-    /*
-    Customers
-    */
-
-    for (
-        const customer of
-        currentRoom.customers
-    ) {
-
-        drawCustomer(
-            customer
-        );
-
-    }
-
-
-    /*
-    Players
-    */
-
-    for (
-        const player of
-        currentRoom.players
-    ) {
-
-        drawPlayer(
-            player
-        );
-
-    }
-
-
-    /*
-    Bots
-    */
-
-    for (
-        const bot of
-        currentRoom.bots
-    ) {
-
-        drawBot(
-            bot
-        );
-
-    }
-
-
-    requestAnimationFrame(
-        render
-    );
-
-}
-
-
-render();
 
 
 /* =====================================================
@@ -2101,39 +1128,38 @@ function updateJoystick(
 ) {
 
     const rect =
-        joystick.getBoundingClientRect();
+        joystick
+            .getBoundingClientRect();
 
 
-    const centerX =
-        rect.left +
-        rect.width /
-        2;
+    const touch =
+        event.touches[0];
 
 
-    const centerY =
-        rect.top +
-        rect.height /
-        2;
+    let x =
+        touch.clientX -
+        (
+            rect.left +
+            rect.width / 2
+        );
 
 
-    let dx =
-        event.clientX -
-        centerX;
-
-
-    let dy =
-        event.clientY -
-        centerY;
+    let y =
+        touch.clientY -
+        (
+            rect.top +
+            rect.height / 2
+        );
 
 
     const max =
-        40;
+        35;
 
 
     const length =
         Math.sqrt(
-            dx * dx +
-            dy * dy
+            x * x +
+            y * y
         );
 
 
@@ -2142,40 +1168,52 @@ function updateJoystick(
         max
     ) {
 
-        dx =
-            dx /
+        x =
+            x /
             length *
             max;
 
-        dy =
-            dy /
+        y =
+            y /
             length *
             max;
 
     }
 
 
-    knob.style.transform =
-        `translate(${dx}px, ${dy}px)`;
+    knob.style.left =
+        (
+            29 +
+            x
+        ) +
+        "px";
 
 
-    input.left =
-        dx <
-        -10;
-
-
-    input.right =
-        dx >
-        10;
+    knob.style.top =
+        (
+            29 +
+            y
+        ) +
+        "px";
 
 
     input.up =
-        dy <
+        y <
         -10;
 
 
     input.down =
-        dy >
+        y >
+        10;
+
+
+    input.left =
+        x <
+        -10;
+
+
+    input.right =
+        x >
         10;
 
 
@@ -2185,52 +1223,56 @@ function updateJoystick(
 
 
 joystick.addEventListener(
-    "pointerdown",
-    event => {
+    "touchstart",
+    e => {
 
         joystickActive =
             true;
 
-        joystick.setPointerCapture(
-            event.pointerId
-        );
-
         updateJoystick(
-            event
+            e
         );
 
+        e.preventDefault();
+
+    },
+    {
+        passive:
+            false
     }
 );
 
 
 joystick.addEventListener(
-    "pointermove",
-    event => {
+    "touchmove",
+    e => {
 
         if (
             joystickActive
         ) {
 
             updateJoystick(
-                event
+                e
             );
 
         }
 
+        e.preventDefault();
+
+    },
+    {
+        passive:
+            false
     }
 );
 
 
 joystick.addEventListener(
-    "pointerup",
+    "touchend",
     () => {
 
         joystickActive =
             false;
-
-
-        knob.style.transform =
-            "translate(0, 0)";
 
 
         input.up =
@@ -2246,6 +1288,13 @@ joystick.addEventListener(
             false;
 
 
+        knob.style.left =
+            "29px";
+
+        knob.style.top =
+            "29px";
+
+
         sendInput();
 
     }
@@ -2253,20 +1302,591 @@ joystick.addEventListener(
 
 
 /* =====================================================
-   PREVENT MOBILE SCROLL
+   DRAWING
 ===================================================== */
 
-document.addEventListener(
-    "touchmove",
-    event => {
+function drawBackground() {
 
-        event.preventDefault();
+    ctx.fillStyle =
+        "#222";
+
+    ctx.fillRect(
+        0,
+        0,
+        480,
+        270
+    );
+
+
+    /*
+    Store.
+    */
+
+    ctx.fillStyle =
+        "#333";
+
+    ctx.fillRect(
+        20,
+        30,
+        250,
+        210
+    );
+
+
+    /*
+    Store floor.
+    */
+
+    ctx.fillStyle =
+        "#555";
+
+    ctx.fillRect(
+        30,
+        40,
+        230,
+        190
+    );
+
+
+    /*
+    Outside.
+    */
+
+    ctx.fillStyle =
+        "#242424";
+
+    ctx.fillRect(
+        280,
+        30,
+        190,
+        210
+    );
+
+
+    /*
+    Road.
+    */
+
+    ctx.fillStyle =
+        "#181818";
+
+    ctx.fillRect(
+        280,
+        0,
+        190,
+        270
+    );
+
+
+    /*
+    Register.
+    */
+
+    drawRect(
+        140,
+        105,
+        25,
+        25,
+        "#e0a458"
+    );
+
+
+    /*
+    Shelves.
+    */
+
+    drawRect(
+        215,
+        90,
+        35,
+        50,
+        "#9b7653"
+    );
+
+
+    /*
+    Storage.
+    */
+
+    drawRect(
+        210,
+        200,
+        40,
+        30,
+        "#765438"
+    );
+
+
+    /*
+    Restroom.
+    */
+
+    drawRect(
+        45,
+        100,
+        40,
+        35,
+        "#5686a8"
+    );
+
+
+    /*
+    Delivery.
+    */
+
+    drawRect(
+        350,
+        220,
+        70,
+        30,
+        "#444"
+    );
+
+
+    /*
+    Pumps.
+    */
+
+    for (
+        let i = 0;
+        i <
+        4;
+        i++
+    ) {
+
+        const pump =
+            [
+                {
+                    x:
+                        350,
+
+                    y:
+                        70
+                },
+
+                {
+                    x:
+                        420,
+
+                    y:
+                        70
+                },
+
+                {
+                    x:
+                        350,
+
+                    y:
+                        145
+                },
+
+                {
+                    x:
+                        420,
+
+                    y:
+                        145
+                }
+
+            ][i];
+
+
+        drawRect(
+            pump.x -
+            8,
+
+            pump.y -
+            12,
+
+            16,
+
+            24,
+
+            i <
+            (
+                state &&
+                state.upgrades &&
+                state.upgrades.pumps
+            )
+                ? "#d94848"
+                : "#333"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   DRAW HELPERS
+===================================================== */
+
+function drawRect(
+    x,
+    y,
+    width,
+    height,
+    color
+) {
+
+    ctx.fillStyle =
+        color;
+
+    ctx.fillRect(
+        x,
+        y,
+        width,
+        height
+    );
+
+}
+
+
+function drawCircle(
+    x,
+    y,
+    radius,
+    color
+) {
+
+    ctx.fillStyle =
+        color;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        x,
+        y,
+        radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+}
+
+
+/* =====================================================
+   DRAW CUSTOMERS
+===================================================== */
+
+function drawCustomers() {
+
+    if (
+        !state
+    ) {
+
+        return;
+
+    }
+
+
+    for (
+        const customer of
+        state.customers
+    ) {
+
+        let color =
+            "#eee";
+
+
+        if (
+            customer.type ===
+            "fuel"
+        ) {
+
+            color =
+                "#ff7777";
+
+        }
+
+        else if (
+            customer.type ===
+            "shop"
+        ) {
+
+            color =
+                "#77aaff";
+
+        }
+
+        else if (
+            customer.type ===
+            "fuelShop"
+        ) {
+
+            color =
+                "#bb77ff";
+
+        }
+
+        else {
+
+            color =
+                "#77ddaa";
+
+        }
+
+
+        drawCircle(
+            customer.x,
+            customer.y,
+            5,
+            color
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   DRAW WORKERS
+===================================================== */
+
+function drawWorkers() {
+
+    if (
+        !state
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+    Bots.
+    */
+
+    for (
+        const bot of
+        state.bots
+    ) {
+
+        drawCircle(
+            bot.x,
+            bot.y,
+            7,
+            "#9b5de5"
+        );
+
+
+        ctx.fillStyle =
+            "#fff";
+
+        ctx.font =
+            "7px Arial";
+
+        ctx.textAlign =
+            "center";
+
+
+        ctx.fillText(
+            bot.name,
+            bot.x,
+            bot.y -
+            10
+        );
+
+    }
+
+
+    /*
+    Players.
+    */
+
+    for (
+        const player of
+        state.players
+    ) {
+
+        drawCircle(
+            player.x,
+            player.y,
+            7,
+            player.color
+        );
+
+
+        ctx.fillStyle =
+            "#fff";
+
+        ctx.font =
+            "7px Arial";
+
+        ctx.textAlign =
+            "center";
+
+
+        ctx.fillText(
+            player.name,
+            player.x,
+            player.y -
+            10
+        );
+
+
+        if (
+            player.id ===
+            playerId
+        ) {
+
+            ctx.strokeStyle =
+                "#fff";
+
+            ctx.lineWidth =
+                1;
+
+            ctx.strokeRect(
+                player.x -
+                9,
+
+                player.y -
+                9,
+
+                18,
+
+                18
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   DRAW TASKS
+===================================================== */
+
+function drawTasks() {
+
+    if (
+        !state
+    ) {
+
+        return;
+
+    }
+
+
+    for (
+        const task of
+        state.tasks
+    ) {
+
+        if (
+            task.type ===
+            "clean"
+        ) {
+
+            drawCircle(
+                task.x,
+                task.y,
+                5,
+                "#76c893"
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   MAIN RENDER
+===================================================== */
+
+function render() {
+
+    drawBackground();
+
+    drawTasks();
+
+    drawCustomers();
+
+    drawWorkers();
+
+}
+
+
+/* =====================================================
+   PERFORMANCE LOOP
+===================================================== */
+
+/*
+30 FPS maximum.
+
+The browser does not need
+to render faster than this.
+*/
+
+let lastFrame =
+    0;
+
+
+function gameLoop(
+    timestamp
+) {
+
+    if (
+        timestamp -
+        lastFrame >=
+        33
+    ) {
+
+        lastFrame =
+            timestamp;
+
+        render();
+
+    }
+
+
+    requestAnimationFrame(
+        gameLoop
+    );
+
+}
+
+
+requestAnimationFrame(
+    gameLoop
+);
+
+
+/* =====================================================
+   MENU VISIBILITY
+===================================================== */
+
+setInterval(
+    () => {
+
+        if (
+            state &&
+            state.players
+                .some(
+                    p =>
+                        p.id ===
+                        playerId
+                )
+        ) {
+
+            document
+                .getElementById(
+                    "menu"
+                )
+                .style.display =
+                "none";
+
+        }
 
     },
-    {
-        passive:
-            false
-    }
+    250
 );
 
 </script>
