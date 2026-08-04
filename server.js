@@ -1,88 +1,213 @@
 
 const express = require("express");
 const http = require("http");
-const path = require("path");
 const { Server } = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-    transports: ["polling", "websocket"],
-    pingInterval: 25000,
-    pingTimeout: 10000,
-    maxHttpBufferSize: 100000,
     cors: {
         origin: "*"
-    }
+    },
+    transports: ["polling", "websocket"]
 });
 
 const PORT = process.env.PORT || 3000;
 
+app.use(express.static(path.join(__dirname)));
 
-/* =====================================================
-   OCTANE
-   Cooperative Gas Station Simulator
-===================================================== */
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "index.html"));
+});
 
 
-/* =====================================================
-   GAME SETTINGS
-===================================================== */
-
-const WORLD_WIDTH = 640;
-const WORLD_HEIGHT = 360;
+/* =========================================================
+   CONFIGURATION
+========================================================= */
 
 const MAX_PLAYERS = 4;
-const MAX_BOTS = 4;
 
 const STARTING_MONEY = 100;
 
-const PLAYER_SPEED = 3.2;
-const BOT_SPEED = 2.3;
+const STARTING_FUEL = 50;
+const STARTING_MAX_FUEL = 100;
 
-const SIMULATION_RATE = 10;
-const NETWORK_RATE = 10;
+const STARTING_STOCK = 20;
+const STARTING_MAX_STOCK = 40;
 
-const CUSTOMER_LIMIT = 10;
+const DELIVERY_BOXES_PER_TRUCK = 5;
 
-const TASK_TIMEOUT = 8000;
+const CUSTOMER_SPAWN_TIME = 5000;
+
+const PLAYER_SPEED = 2.5;
+
+const BOT_SPEED = 1.8;
+
+const CUSTOMER_SPEED = 1.2;
 
 
-/* =====================================================
+/* =========================================================
+   ROOMS
+========================================================= */
+
+const rooms = new Map();
+
+
+/* =========================================================
+   UTILITY
+========================================================= */
+
+function generateRoomCode() {
+
+    const chars =
+        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+    let code = "";
+
+    for (
+        let i = 0;
+        i < 4;
+        i++
+    ) {
+
+        code +=
+            chars[
+                Math.floor(
+                    Math.random() *
+                    chars.length
+                )
+            ];
+
+    }
+
+    return code;
+
+}
+
+
+function getRoom(code) {
+
+    return rooms.get(
+        code
+    );
+
+}
+
+
+function distance(
+    a,
+    b
+) {
+
+    const dx =
+        a.x -
+        b.x;
+
+    const dy =
+        a.y -
+        b.y;
+
+    return Math.sqrt(
+        dx * dx +
+        dy * dy
+    );
+
+}
+
+
+function moveToward(
+    entity,
+    target,
+    speed
+) {
+
+    const dx =
+        target.x -
+        entity.x;
+
+    const dy =
+        target.y -
+        entity.y;
+
+    const dist =
+        Math.sqrt(
+            dx * dx +
+            dy * dy
+        );
+
+
+    if (
+        dist <= speed
+    ) {
+
+        entity.x =
+            target.x;
+
+        entity.y =
+            target.y;
+
+        return true;
+
+    }
+
+
+    entity.x +=
+        (
+            dx /
+            dist
+        ) *
+        speed;
+
+
+    entity.y +=
+        (
+            dy /
+            dist
+        ) *
+        speed;
+
+
+    return false;
+
+}
+
+
+/* =========================================================
    STATION LOCATIONS
-===================================================== */
+========================================================= */
 
-const STATION = {
+const LOCATIONS = {
 
     register: {
-        x: 145,
+        x: 150,
         y: 105
     },
 
     shelves: {
-        x: 255,
+        x: 247,
         y: 105
     },
 
     storage: {
-        x: 255,
-        y: 280
-    },
-
-    restroom: {
-        x: 80,
-        y: 110
+        x: 247,
+        y: 260
     },
 
     cleaning: {
-        x: 100,
-        y: 255
+        x: 87,
+        y: 235
+    },
+
+    restroom: {
+        x: 82,
+        y: 157
     },
 
     delivery: {
-        x: 515,
-        y: 300
+        x: 517,
+        y: 290
     },
 
     pumps: [
@@ -112,237 +237,77 @@ const STATION = {
 };
 
 
-/* =====================================================
-   ROOM STORAGE
-===================================================== */
+/* =========================================================
+   ROOM CREATION
+========================================================= */
 
-const rooms = Object.create(null);
-
-let nextRoomNumber = 1;
-
-
-/* =====================================================
-   UTILITY
-===================================================== */
-
-function randomRoomCode() {
-
-    const characters =
-        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-    let code = "";
-
-    for (
-        let i = 0;
-        i < 4;
-        i++
-    ) {
-
-        code +=
-            characters[
-                Math.floor(
-                    Math.random() *
-                    characters.length
-                )
-            ];
-
-    }
-
-    return code;
-
-}
-
-
-function sanitizeName(name) {
-
-    return String(
-        name || "Player"
-    )
-        .replace(
-            /[<>]/g,
-            ""
-        )
-        .trim()
-        .slice(
-            0,
-            20
-        ) || "Player";
-
-}
-
-
-function clamp(
-    value,
-    min,
-    max
+function createRoom(
+    hostId
 ) {
 
-    return Math.max(
-        min,
-        Math.min(
-            max,
-            value
-        )
-    );
+    return {
 
-}
+        code:
+            generateRoomCode(),
 
-
-function distance(
-    a,
-    b
-) {
-
-    const dx =
-        a.x -
-        b.x;
-
-    const dy =
-        a.y -
-        b.y;
-
-    return Math.sqrt(
-        dx * dx +
-        dy * dy
-    );
-
-}
-
-
-function moveTowards(
-    worker,
-    target,
-    speed
-) {
-
-    const dx =
-        target.x -
-        worker.x;
-
-    const dy =
-        target.y -
-        worker.y;
-
-    const length =
-        Math.sqrt(
-            dx * dx +
-            dy * dy
-        );
-
-
-    if (
-        length <= speed
-    ) {
-
-        worker.x =
-            target.x;
-
-        worker.y =
-            target.y;
-
-        return true;
-
-    }
-
-
-    worker.x +=
-        dx /
-        length *
-        speed;
-
-    worker.y +=
-        dy /
-        length *
-        speed;
-
-
-    return false;
-
-}
-
-
-/* =====================================================
-   CREATE ROOM
-===================================================== */
-
-function createRoom() {
-
-    let code;
-
-    do {
-
-        code =
-            randomRoomCode();
-
-    } while (
-        rooms[code]
-    );
-
-
-    const room = {
-
-        id:
-            nextRoomNumber++,
-
-        code,
-
-        hostId:
-            null,
+        hostId,
 
         started:
             false,
 
+        day:
+            1,
 
         money:
             STARTING_MONEY,
 
         fuel:
-            50,
+            STARTING_FUEL,
 
         maxFuel:
-            100,
+            STARTING_MAX_FUEL,
 
         stock:
-            20,
+            STARTING_STOCK,
 
         maxStock:
-            50,
-
-        deliveryBoxes:
-            5,
+            STARTING_MAX_STOCK,
 
         cleanliness:
             100,
 
 
-        day:
-            1,
-
-        time:
-            8 * 60,
-
-
         players:
-            Object.create(null),
+            [],
+
 
         bots:
-            Object.create(null),
+            [],
+
 
         customers:
-            Object.create(null),
+            [],
+
 
         tasks:
-            Object.create(null),
+            [],
 
 
-        nextBotId:
-            1,
+        delivery: {
 
-        nextCustomerId:
-            1,
+            ordered:
+                false,
 
-        nextTaskId:
-            1,
+            truckArrived:
+                false,
+
+            boxes:
+                0,
+
+            maxBoxes:
+                DELIVERY_BOXES_PER_TRUCK
+
+        },
 
 
         upgrades: {
@@ -350,2030 +315,64 @@ function createRoom() {
             pumps:
                 2,
 
-            employees:
+            shelves:
                 1,
 
-            shelves:
+            employees:
                 1
-
-        }
-
-    };
-
-
-    rooms[code] =
-        room;
-
-
-    return room;
-
-}
-
-
-/* =====================================================
-   FIND ROOM
-===================================================== */
-
-function findRoomByPlayer(
-    socketId
-) {
-
-    for (
-        const room of
-        Object.values(rooms)
-    ) {
-
-        if (
-            room.players[
-                socketId
-            ]
-        ) {
-
-            return room;
-
-        }
-
-    }
-
-    return null;
-
-}
-
-
-/* =====================================================
-   CREATE WORKER
-===================================================== */
-
-function createWorker(
-    id,
-    name,
-    x,
-    y,
-    type,
-    color
-) {
-
-    return {
-
-        id,
-
-        name,
-
-        type,
-
-        x,
-
-        y,
-
-        color,
-
-
-        input: {
-
-            up:
-                false,
-
-            down:
-                false,
-
-            left:
-                false,
-
-            right:
-                false
 
         },
 
 
-        task:
-            null,
+        stats: {
 
-        carrying:
-            null,
+            customersServed:
+                0,
+
+            customersLost:
+                0,
+
+            deliveries:
+                0
+
+        },
 
 
-        lastThink:
-            0,
+        nextCustomerId:
+            1,
 
-        lastMoved:
-            Date.now(),
+        nextBotId:
+            1,
 
-        lastX:
-            x,
-
-        lastY:
-            y
+        nextTaskId:
+            1
 
     };
 
 }
 
 
-/* =====================================================
-   TASK SYSTEM
-===================================================== */
-
-function createTask(
-    room,
-    type,
-    x,
-    y,
-    priority = 1
-) {
-
-    const id =
-        "task_" +
-        room.nextTaskId++;
-
-
-    room.tasks[id] = {
-
-        id,
-
-        type,
-
-        x,
-
-        y,
-
-        priority,
-
-        claimedBy:
-            null,
-
-        claimedAt:
-            0
-
-    };
-
-
-    return room.tasks[id];
-
-}
-
-
-function findTask(
-    room,
-    type
-) {
-
-    let best =
-        null;
-
-
-    for (
-        const task of
-        Object.values(
-            room.tasks
-        )
-    ) {
-
-        if (
-            task.type !==
-            type
-        ) {
-
-            continue;
-
-        }
-
-
-        if (
-            task.claimedBy
-        ) {
-
-            continue;
-
-        }
-
-
-        if (
-            !best ||
-            task.priority >
-            best.priority
-        ) {
-
-            best =
-                task;
-
-        }
-
-    }
-
-
-    return best;
-
-}
-
-
-/* =====================================================
-   RELEASE TASK
-===================================================== */
-
-function releaseWorkerTask(
-    room,
-    worker
-) {
-
-    if (
-        !worker.task
-    ) {
-
-        return;
-
-    }
-
-
-    const task =
-        worker.task;
-
-
-    if (
-        task.taskId
-    ) {
-
-        const stationTask =
-            room.tasks[
-                task.taskId
-            ];
-
-
-        if (
-            stationTask &&
-            stationTask.claimedBy ===
-            worker.id
-        ) {
-
-            stationTask.claimedBy =
-                null;
-
-            stationTask.claimedAt =
-                0;
-
-        }
-
-    }
-
-
-    if (
-        task.customerId
-    ) {
-
-        const customer =
-            room.customers[
-                task.customerId
-            ];
-
-
-        if (
-            customer &&
-            customer.claimedBy ===
-            worker.id
-        ) {
-
-            customer.claimedBy =
-                null;
-
-
-            if (
-                customer.state ===
-                "fueling"
-            ) {
-
-                customer.state =
-                    "waitingFuel";
-
-            }
-
-
-            if (
-                customer.state ===
-                "shopping"
-            ) {
-
-                customer.state =
-                    "waitingCheckout";
-
-            }
-
-        }
-
-    }
-
-
-    worker.task =
-        null;
-
-}
-
-
-/* =====================================================
-   CUSTOMER SYSTEM
-===================================================== */
-
-const CUSTOMER_TYPES = [
-
-    "fuel",
-
-    "shop",
-
-    "fuelShop",
-
-    "restroom"
-
-];
-
-
-function createCustomer(
-    room
-) {
-
-    if (
-        Object.keys(
-            room.customers
-        ).length >=
-        CUSTOMER_LIMIT
-    ) {
-
-        return;
-
-    }
-
-
-    const type =
-        CUSTOMER_TYPES[
-            Math.floor(
-                Math.random() *
-                CUSTOMER_TYPES.length
-            )
-        ];
-
-
-    const pumpIndex =
-        Math.floor(
-            Math.random() *
-            room.upgrades.pumps
-        );
-
-
-    const id =
-        "customer_" +
-        room.nextCustomerId++;
-
-
-    room.customers[id] = {
-
-        id,
-
-        type,
-
-
-        x:
-            625,
-
-        y:
-            330,
-
-
-        state:
-            "entering",
-
-
-        pumpIndex,
-
-
-        fuelProgress:
-            0,
-
-        shopProgress:
-            0,
-
-        restroomProgress:
-            0,
-
-
-        patience:
-            100,
-
-
-        claimedBy:
-            null
-
-    };
-
-}
-
-
-/* =====================================================
-   CUSTOMER UPDATE
-===================================================== */
-
-function updateCustomers(
-    room
-) {
-
-    for (
-        const customer of
-        Object.values(
-            room.customers
-        )
-    ) {
-
-        if (
-            customer.state ===
-            "entering"
-        ) {
-
-            customer.x -=
-                1.5;
-
-
-            if (
-                customer.x <=
-                560
-            ) {
-
-                if (
-                    customer.type ===
-                    "fuel" ||
-                    customer.type ===
-                    "fuelShop"
-                ) {
-
-                    customer.state =
-                        "waitingFuel";
-
-                }
-
-                else if (
-                    customer.type ===
-                    "shop"
-                ) {
-
-                    customer.state =
-                        "waitingCheckout";
-
-                }
-
-                else {
-
-                    customer.state =
-                        "waitingRestroom";
-
-                }
-
-            }
-
-        }
-
-
-        else if (
-            customer.state ===
-            "waitingFuel"
-        ) {
-
-            customer.patience -=
-                0.03;
-
-        }
-
-
-        else if (
-            customer.state ===
-            "fueling"
-        ) {
-
-            customer.fuelProgress +=
-                2;
-
-
-            if (
-                customer.fuelProgress >=
-                100
-            ) {
-
-                room.money +=
-                    15;
-
-
-                customer.claimedBy =
-                    null;
-
-
-                if (
-                    customer.type ===
-                    "fuelShop"
-                ) {
-
-                    customer.state =
-                        "waitingCheckout";
-
-                }
-
-                else {
-
-                    customer.state =
-                        "leaving";
-
-                }
-
-            }
-
-        }
-
-
-        else if (
-            customer.state ===
-            "waitingCheckout"
-        ) {
-
-            customer.patience -=
-                0.03;
-
-        }
-
-
-        else if (
-            customer.state ===
-            "shopping"
-        ) {
-
-            customer.shopProgress +=
-                3;
-
-
-            if (
-                customer.shopProgress >=
-                100
-            ) {
-
-                if (
-                    room.stock >
-                    0
-                ) {
-
-                    room.stock--;
-
-                    room.money +=
-                        10;
-
-                }
-
-
-                customer.claimedBy =
-                    null;
-
-                customer.state =
-                    "leaving";
-
-            }
-
-        }
-
-
-        else if (
-            customer.state ===
-            "waitingRestroom"
-        ) {
-
-            customer.patience -=
-                0.03;
-
-
-            if (
-                Math.random() <
-                0.01
-            ) {
-
-                customer.state =
-                    "usingRestroom";
-
-            }
-
-        }
-
-
-        else if (
-            customer.state ===
-            "usingRestroom"
-        ) {
-
-            customer.restroomProgress +=
-                3;
-
-
-            if (
-                customer.restroomProgress >=
-                100
-            ) {
-
-                createTask(
-                    room,
-                    "clean",
-                    80,
-                    110,
-                    2
-                );
-
-
-                customer.state =
-                    "leaving";
-
-            }
-
-        }
-
-
-        else if (
-            customer.state ===
-            "leaving"
-        ) {
-
-            customer.x +=
-                2;
-
-
-            if (
-                customer.x >
-                660
-            ) {
-
-                delete room.customers[
-                    customer.id
-                ];
-
-            }
-
-        }
-
-
-        if (
-            customer.patience <=
-            0
-        ) {
-
-            customer.claimedBy =
-                null;
-
-            customer.state =
-                "leaving";
-
-        }
-
-    }
-
-
-    /*
-    Customer spawn rate.
-    */
-
-    if (
-        Math.random() <
-        0.025
-    ) {
-
-        createCustomer(
-            room
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   PLAYER MOVEMENT
-===================================================== */
-
-function updatePlayer(
-    player
-) {
-
-    let dx = 0;
-    let dy = 0;
-
-
-    if (
-        player.input.up
-    ) {
-
-        dy--;
-
-    }
-
-    if (
-        player.input.down
-    ) {
-
-        dy++;
-
-    }
-
-    if (
-        player.input.left
-    ) {
-
-        dx--;
-
-    }
-
-    if (
-        player.input.right
-    ) {
-
-        dx++;
-
-    }
-
-
-    if (
-        dx !== 0 ||
-        dy !== 0
-    ) {
-
-        const length =
-            Math.sqrt(
-                dx * dx +
-                dy * dy
-            );
-
-
-        player.x +=
-            dx /
-            length *
-            PLAYER_SPEED;
-
-        player.y +=
-            dy /
-            length *
-            PLAYER_SPEED;
-
-
-        player.x =
-            clamp(
-                player.x,
-                10,
-                WORLD_WIDTH -
-                10
-            );
-
-
-        player.y =
-            clamp(
-                player.y,
-                10,
-                WORLD_HEIGHT -
-                10
-            );
-
-
-        player.lastMoved =
-            Date.now();
-
-    }
-
-
-    updateWorkerTask(
-        roomForWorker(player),
-        player
-    );
-
-}
-
-
-function roomForWorker(
-    worker
-) {
-
-    for (
-        const room of
-        Object.values(rooms)
-    ) {
-
-        if (
-            room.players[
-                worker.id
-            ] ||
-            room.bots[
-                worker.id
-            ]
-        ) {
-
-            return room;
-
-        }
-
-    }
-
-    return null;
-
-}
-
-
-/* =====================================================
-   WORKER TASKS
-===================================================== */
-
-function updateWorkerTask(
-    room,
-    worker
-) {
-
-    if (
-        !room ||
-        !worker.task
-    ) {
-
-        return;
-
-    }
-
-
-    const task =
-        worker.task;
-
-
-    if (
-        task.type ===
-        "fuel"
-    ) {
-
-        const customer =
-            room.customers[
-                task.customerId
-            ];
-
-
-        if (
-            !customer
-        ) {
-
-            worker.task =
-                null;
-
-            return;
-
-        }
-
-
-        if (
-            room.fuel <=
-            0
-        ) {
-
-            releaseWorkerTask(
-                room,
-                worker
-            );
-
-            return;
-
-        }
-
-
-        room.fuel -=
-            0.12;
-
-
-        customer.fuelProgress +=
-            2;
-
-
-        if (
-            customer.fuelProgress >=
-            100
-        ) {
-
-            room.money +=
-                15;
-
-
-            if (
-                customer.type ===
-                "fuelShop"
-            ) {
-
-                customer.state =
-                    "waitingCheckout";
-
-            }
-
-            else {
-
-                customer.state =
-                    "leaving";
-
-            }
-
-
-            customer.claimedBy =
-                null;
-
-
-            worker.task =
-                null;
-
-        }
-
-    }
-
-
-    else if (
-        task.type ===
-        "cashier"
-    ) {
-
-        const customer =
-            room.customers[
-                task.customerId
-            ];
-
-
-        if (
-            !customer
-        ) {
-
-            worker.task =
-                null;
-
-            return;
-
-        }
-
-
-        customer.shopProgress +=
-            4;
-
-
-        if (
-            customer.shopProgress >=
-            100
-        ) {
-
-            if (
-                room.stock >
-                0
-            ) {
-
-                room.stock--;
-
-                room.money +=
-                    10;
-
-            }
-
-
-            customer.claimedBy =
-                null;
-
-            customer.state =
-                "leaving";
-
-
-            worker.task =
-                null;
-
-        }
-
-    }
-
-
-    else if (
-        task.type ===
-        "clean"
-    ) {
-
-        const stationTask =
-            room.tasks[
-                task.taskId
-            ];
-
-
-        if (
-            !stationTask
-        ) {
-
-            worker.task =
-                null;
-
-            return;
-
-        }
-
-
-        task.progress +=
-            5;
-
-
-        if (
-            task.progress >=
-            100
-        ) {
-
-            room.cleanliness =
-                Math.min(
-                    100,
-                    room.cleanliness +
-                    15
-                );
-
-
-            delete room.tasks[
-                task.taskId
-            ];
-
-
-            worker.task =
-                null;
-
-        }
-
-    }
-
-
-    else if (
-        task.type ===
-        "restock"
-    ) {
-
-        task.progress +=
-            4;
-
-
-        if (
-            task.progress >=
-            100
-        ) {
-
-            room.stock =
-                Math.min(
-                    room.maxStock,
-                    room.stock +
-                    10
-                );
-
-
-            worker.carrying =
-                null;
-
-
-            worker.task =
-                null;
-
-        }
-
-    }
-
-
-    else if (
-        task.type ===
-        "delivery"
-    ) {
-
-        task.progress +=
-            3;
-
-
-        if (
-            task.progress >=
-            100
-        ) {
-
-            room.fuel =
-                Math.min(
-                    room.maxFuel,
-                    room.fuel +
-                    40
-                );
-
-
-            worker.task =
-                null;
-
-        }
-
-    }
-
-}
-
-
-/* =====================================================
-   PLAYER INTERACTION
-===================================================== */
-
-function interact(
-    room,
-    player
-) {
-
-    if (
-        !room ||
-        !room.started
-    ) {
-
-        return;
-
-    }
-
-
-    /*
-    Cancel current action.
-    */
-
-    if (
-        player.task
-    ) {
-
-        releaseWorkerTask(
-            room,
-            player
-        );
-
-        return;
-
-    }
-
-
-    /*
-    Fuel pump.
-    */
-
-    for (
-        let i = 0;
-        i <
-        room.upgrades.pumps;
-        i++
-    ) {
-
-        const pump =
-            STATION.pumps[i];
-
-
-        if (
-            distance(
-                player,
-                pump
-            ) <
-            35
-        ) {
-
-            const customer =
-                Object.values(
-                    room.customers
-                ).find(
-                    c =>
-                        c.state ===
-                        "waitingFuel" &&
-
-                        c.pumpIndex ===
-                        i &&
-
-                        !c.claimedBy
-                );
-
-
-            if (
-                customer
-            ) {
-
-                customer.claimedBy =
-                    player.id;
-
-                customer.state =
-                    "fueling";
-
-
-                player.task = {
-
-                    type:
-                        "fuel",
-
-                    customerId:
-                        customer.id
-
-                };
-
-
-                return;
-
-            }
-
-        }
-
-    }
-
-
-    /*
-    Checkout.
-    */
-
-    if (
-        distance(
-            player,
-            STATION.register
-        ) <
-        35
-    ) {
-
-        const customer =
-            Object.values(
-                room.customers
-            ).find(
-                c =>
-                    c.state ===
-                    "waitingCheckout" &&
-
-                    !c.claimedBy
-            );
-
-
-        if (
-            customer
-        ) {
-
-            customer.claimedBy =
-                player.id;
-
-            customer.state =
-                "shopping";
-
-
-            player.task = {
-
-                type:
-                    "cashier",
-
-                customerId:
-                    customer.id
-
-            };
-
-
-            return;
-
-        }
-
-    }
-
-
-    /*
-    Storage pickup.
-    */
-
-    if (
-        distance(
-            player,
-            STATION.storage
-        ) <
-        35 &&
-        room.deliveryBoxes >
-        0 &&
-        !player.carrying
-    ) {
-
-        room.deliveryBoxes--;
-
-        player.carrying =
-            "box";
-
-        return;
-
-    }
-
-
-    /*
-    Restock shelves.
-    */
-
-    if (
-        distance(
-            player,
-            STATION.shelves
-        ) <
-        35 &&
-        player.carrying ===
-        "box"
-    ) {
-
-        player.task = {
-
-            type:
-                "restock",
-
-            progress:
-                0
-
-        };
-
-
-        return;
-
-    }
-
-
-    /*
-    Cleaning.
-    */
-
-    const cleanTask =
-        findTask(
-            room,
-            "clean"
-        );
-
-
-    if (
-        cleanTask &&
-        distance(
-            player,
-            cleanTask
-        ) <
-        35
-    ) {
-
-        cleanTask.claimedBy =
-            player.id;
-
-        cleanTask.claimedAt =
-            Date.now();
-
-
-        player.task = {
-
-            type:
-                "clean",
-
-            taskId:
-                cleanTask.id,
-
-            progress:
-                0
-
-        };
-
-
-        return;
-
-    }
-
-
-    /*
-    Fuel delivery.
-    */
-
-    if (
-        distance(
-            player,
-            STATION.delivery
-        ) <
-        40 &&
-        room.fuel <
-        room.maxFuel
-    ) {
-
-        player.task = {
-
-            type:
-                "delivery",
-
-            progress:
-                0
-
-        };
-
-    }
-
-}
-
-
-/* =====================================================
-   BOT AI
-===================================================== */
-
-function botThink(
-    room,
-    bot
-) {
-
-    const now =
-        Date.now();
-
-
-    if (
-        now -
-        bot.lastThink <
-        800
-    ) {
-
-        return;
-
-    }
-
-
-    bot.lastThink =
-        now;
-
-
-    if (
-        bot.task
-    ) {
-
-        return;
-
-    }
-
-
-    /*
-    Fuel customers.
-    */
-
-    const fuelCustomer =
-        Object.values(
-            room.customers
-        ).find(
-            c =>
-                c.state ===
-                "waitingFuel" &&
-
-                !c.claimedBy &&
-
-                room.fuel >
-                0
-        );
-
-
-    if (
-        fuelCustomer
-    ) {
-
-        fuelCustomer.claimedBy =
-            bot.id;
-
-        fuelCustomer.state =
-            "fueling";
-
-
-        bot.task = {
-
-            type:
-                "fuel",
-
-            customerId:
-                fuelCustomer.id
-
-        };
-
-
-        return;
-
-    }
-
-
-    /*
-    Checkout.
-    */
-
-    const checkout =
-        Object.values(
-            room.customers
-        ).find(
-            c =>
-                c.state ===
-                "waitingCheckout" &&
-
-                !c.claimedBy
-        );
-
-
-    if (
-        checkout
-    ) {
-
-        checkout.claimedBy =
-            bot.id;
-
-        checkout.state =
-            "shopping";
-
-
-        bot.task = {
-
-            type:
-                "cashier",
-
-            customerId:
-                checkout.id
-
-        };
-
-
-        return;
-
-    }
-
-
-    /*
-    Restock.
-    */
-
-    if (
-        room.stock <
-        10 &&
-        room.deliveryBoxes >
-        0
-    ) {
-
-        bot.task = {
-
-            type:
-                "pickup"
-
-        };
-
-
-        return;
-
-    }
-
-
-    /*
-    Cleaning.
-    */
-
-    const cleanTask =
-        findTask(
-            room,
-            "clean"
-        );
-
-
-    if (
-        cleanTask
-    ) {
-
-        cleanTask.claimedBy =
-            bot.id;
-
-        cleanTask.claimedAt =
-            now;
-
-
-        bot.task = {
-
-            type:
-                "clean",
-
-            taskId:
-                cleanTask.id,
-
-            progress:
-                0
-
-        };
-
-
-        return;
-
-    }
-
-
-    /*
-    Fuel delivery.
-    */
-
-    if (
-        room.fuel <
-        25
-    ) {
-
-        bot.task = {
-
-            type:
-                "delivery",
-
-            progress:
-                0
-
-        };
-
-    }
-
-}
-
-
-/* =====================================================
-   BOT UPDATE
-===================================================== */
-
-function updateBot(
-    room,
-    bot
-) {
-
-    const now =
-        Date.now();
-
-
-    if (
-        bot.task &&
-        now -
-        bot.lastMoved >
-        TASK_TIMEOUT
-    ) {
-
-        releaseWorkerTask(
-            room,
-            bot
-        );
-
-    }
-
-
-    botThink(
-        room,
-        bot
-    );
-
-
-    if (
-        !bot.task
-    ) {
-
-        return;
-
-    }
-
-
-    const task =
-        bot.task;
-
-
-    if (
-        task.type ===
-        "fuel"
-    ) {
-
-        const customer =
-            room.customers[
-                task.customerId
-            ];
-
-
-        if (
-            !customer
-        ) {
-
-            bot.task =
-                null;
-
-            return;
-
-        }
-
-
-        const pump =
-            STATION.pumps[
-                customer.pumpIndex
-            ];
-
-
-        if (
-            moveTowards(
-                bot,
-                pump,
-                BOT_SPEED
-            )
-        ) {
-
-            updateWorkerTask(
-                room,
-                bot
-            );
-
-        }
-
-    }
-
-
-    else if (
-        task.type ===
-        "cashier"
-    ) {
-
-        if (
-            moveTowards(
-                bot,
-                STATION.register,
-                BOT_SPEED
-            )
-        ) {
-
-            updateWorkerTask(
-                room,
-                bot
-            );
-
-        }
-
-    }
-
-
-    else if (
-        task.type ===
-        "pickup"
-    ) {
-
-        if (
-            moveTowards(
-                bot,
-                STATION.storage,
-                BOT_SPEED
-            )
-        ) {
-
-            if (
-                room.deliveryBoxes >
-                0
-            ) {
-
-                room.deliveryBoxes--;
-
-                bot.carrying =
-                    "box";
-
-
-                bot.task = {
-
-                    type:
-                        "restock",
-
-                    progress:
-                        0
-
-                };
-
-            }
-
-            else {
-
-                bot.task =
-                    null;
-
-            }
-
-        }
-
-    }
-
-
-    else if (
-        task.type ===
-        "restock"
-    ) {
-
-        if (
-            moveTowards(
-                bot,
-                STATION.shelves,
-                BOT_SPEED
-            )
-        ) {
-
-            updateWorkerTask(
-                room,
-                bot
-            );
-
-        }
-
-    }
-
-
-    else if (
-        task.type ===
-        "clean"
-    ) {
-
-        const cleanTask =
-            room.tasks[
-                task.taskId
-            ];
-
-
-        if (
-            !cleanTask
-        ) {
-
-            bot.task =
-                null;
-
-            return;
-
-        }
-
-
-        if (
-            moveTowards(
-                bot,
-                cleanTask,
-                BOT_SPEED
-            )
-        ) {
-
-            updateWorkerTask(
-                room,
-                bot
-            );
-
-        }
-
-    }
-
-
-    else if (
-        task.type ===
-        "delivery"
-    ) {
-
-        if (
-            moveTowards(
-                bot,
-                STATION.delivery,
-                BOT_SPEED
-            )
-        ) {
-
-            updateWorkerTask(
-                room,
-                bot
-            );
-
-        }
-
-    }
-
-
-    const moved =
-        Math.abs(
-            bot.x -
-            bot.lastX
-        ) > 0.1 ||
-
-        Math.abs(
-            bot.y -
-            bot.lastY
-        ) > 0.1;
-
-
-    if (
-        moved
-    ) {
-
-        bot.lastX =
-            bot.x;
-
-        bot.lastY =
-            bot.y;
-
-        bot.lastMoved =
-            now;
-
-    }
-
-}
-
-
-/* =====================================================
-   GAME UPDATE
-===================================================== */
-
-function updateRoom(
-    room
-) {
-
-    if (
-        !room.started
-    ) {
-
-        return;
-
-    }
-
-
-    for (
-        const player of
-        Object.values(
-            room.players
-        )
-    ) {
-
-        updatePlayer(
-            player
-        );
-
-    }
-
-
-    updateCustomers(
-        room
-    );
-
-
-    for (
-        const bot of
-        Object.values(
-            room.bots
-        )
-    ) {
-
-        updateBot(
-            room,
-            bot
-        );
-
-    }
-
-
-    /*
-    Game clock.
-    */
-
-    room.time +=
-        0.1;
-
-
-    if (
-        room.time >=
-        1440
-    ) {
-
-        room.time =
-            0;
-
-        room.day++;
-
-    }
-
-
-    /*
-    Cleanliness slowly decreases.
-    */
-
-    room.cleanliness =
-        Math.max(
-            0,
-            room.cleanliness -
-            0.003
-        );
-
-
-    /*
-    Release abandoned tasks.
-    */
-
-    const now =
-        Date.now();
-
-
-    for (
-        const task of
-        Object.values(
-            room.tasks
-        )
-    ) {
-
-        if (
-            task.claimedBy &&
-            now -
-            task.claimedAt >
-            TASK_TIMEOUT
-        ) {
-
-            task.claimedBy =
-                null;
-
-            task.claimedAt =
-                0;
-
-        }
-
-    }
-
-}
-
-
-/* =====================================================
-   BUILD NETWORK STATE
-===================================================== */
-
-function buildState(
+/* =========================================================
+   PUBLIC STATE
+========================================================= */
+
+function getPublicState(
     room
 ) {
 
     return {
 
+        code:
+            room.code,
+
+        hostId:
+            room.hostId,
+
         started:
             room.started,
+
+        day:
+            room.day,
 
         money:
             Math.floor(
@@ -2394,27 +393,14 @@ function buildState(
         maxStock:
             room.maxStock,
 
-        deliveryBoxes:
-            room.deliveryBoxes,
-
         cleanliness:
             Math.floor(
                 room.cleanliness
             ),
 
-        day:
-            room.day,
-
-        time:
-            Math.floor(
-                room.time
-            ),
-
 
         players:
-            Object.values(
-                room.players
-            ).map(
+            room.players.map(
                 player => ({
 
                     id:
@@ -2424,34 +410,23 @@ function buildState(
                         player.name,
 
                     x:
-                        Math.round(
-                            player.x
-                        ),
+                        player.x,
 
                     y:
-                        Math.round(
-                            player.y
-                        ),
+                        player.y,
 
                     color:
                         player.color,
 
                     carrying:
-                        player.carrying,
-
-                    task:
-                        player.task
-                            ? player.task.type
-                            : null
+                        player.carrying
 
                 })
             ),
 
 
         bots:
-            Object.values(
-                room.bots
-            ).map(
+            room.bots.map(
                 bot => ({
 
                     id:
@@ -2461,73 +436,58 @@ function buildState(
                         bot.name,
 
                     x:
-                        Math.round(
-                            bot.x
-                        ),
+                        bot.x,
 
                     y:
-                        Math.round(
-                            bot.y
-                        ),
+                        bot.y,
+
+                    color:
+                        "#ff922b",
 
                     carrying:
                         bot.carrying,
 
                     task:
                         bot.task
-                            ? bot.task.type
-                            : null
 
                 })
             ),
 
 
         customers:
-            Object.values(
-                room.customers
-            ).map(
+            room.customers.map(
                 customer => ({
 
                     id:
                         customer.id,
 
-                    type:
-                        customer.type,
-
                     x:
-                        Math.round(
-                            customer.x
-                        ),
+                        customer.x,
 
                     y:
-                        Math.round(
-                            customer.y
-                        ),
+                        customer.y,
+
+                    type:
+                        customer.type,
 
                     state:
                         customer.state,
 
-                    pumpIndex:
-                        customer.pumpIndex,
+                    target:
+                        customer.target,
 
                     fuelProgress:
-                        Math.floor(
-                            customer.fuelProgress
-                        ),
+                        customer.fuelProgress,
 
-                    shopProgress:
-                        Math.floor(
-                            customer.shopProgress
-                        )
+                    patience:
+                        customer.patience
 
                 })
             ),
 
 
         tasks:
-            Object.values(
-                room.tasks
-            ).map(
+            room.tasks.map(
                 task => ({
 
                     id:
@@ -2537,32 +497,42 @@ function buildState(
                         task.type,
 
                     x:
-                        Math.round(
-                            task.x
-                        ),
+                        task.x,
 
                     y:
-                        Math.round(
-                            task.y
-                        )
+                        task.y
 
                 })
             ),
 
 
+        delivery: {
+
+            ordered:
+                room.delivery.ordered,
+
+            truckArrived:
+                room.delivery.truckArrived,
+
+            boxes:
+                room.delivery.boxes
+
+        },
+
+
         upgrades:
-            room.upgrades
+            room.upgrades,
+
+
+        stats:
+            room.stats
 
     };
 
 }
 
 
-/* =====================================================
-   BROADCAST
-===================================================== */
-
-function broadcastRoom(
+function broadcastState(
     room
 ) {
 
@@ -2570,7 +540,7 @@ function broadcastRoom(
         room.code
     ).emit(
         "state",
-        buildState(
+        getPublicState(
             room
         )
     );
@@ -2578,293 +548,324 @@ function broadcastRoom(
 }
 
 
-/* =====================================================
-   SOCKET.IO
-===================================================== */
+/* =========================================================
+   PLAYER COLORS
+========================================================= */
+
+const PLAYER_COLORS = [
+
+    "#4dabf7",
+
+    "#ff6b6b",
+
+    "#69db7c",
+
+    "#da77f2"
+
+];
+
+
+/* =========================================================
+   CREATE ROOM
+========================================================= */
 
 io.on(
     "connection",
     socket => {
 
-        console.log(
-            "Connected:",
-            socket.id
-        );
-
-
-        /*
-        Create station.
-        */
 
         socket.on(
             "createRoom",
             name => {
 
-                try {
-
-                    const room =
-                        createRoom();
-
-
-                    room.hostId =
-                        socket.id;
-
-
-                    socket.join(
-                        room.code
-                    );
-
-
-                    room.players[
-                        socket.id
-                    ] =
-                        createWorker(
-
-                            socket.id,
-
-                            sanitizeName(
-                                name
-                            ),
-
-                            160,
-
-                            300,
-
-                            "player",
-
-                            "#ff5555"
-
-                        );
-
-
-                    socket.emit(
-                        "joined",
-                        {
-
-                            roomCode:
-                                room.code,
-
-                            playerId:
-                                socket.id,
-
-                            isHost:
-                                true
-
-                        }
-                    );
-
-
-                    broadcastRoom(
-                        room
-                    );
-
-
-                    console.log(
-                        "Room created:",
-                        room.code
-                    );
-
-                }
-
-                catch (
-                    error
+                if (
+                    !name ||
+                    typeof name !==
+                    "string"
                 ) {
 
-                    console.error(
-                        "Create room error:",
-                        error
-                    );
-
-
-                    socket.emit(
-                        "errorMessage",
-                        "Could not create station."
-                    );
+                    return;
 
                 }
+
+
+                let roomCode =
+                    generateRoomCode();
+
+
+                while (
+                    rooms.has(
+                        roomCode
+                    )
+                ) {
+
+                    roomCode =
+                        generateRoomCode();
+
+                }
+
+
+                const room =
+                    createRoom(
+                        socket.id
+                    );
+
+
+                room.code =
+                    roomCode;
+
+
+                room.players.push({
+
+                    id:
+                        socket.id,
+
+                    name:
+                        name
+                            .trim()
+                            .slice(
+                                0,
+                                20
+                            ),
+
+                    x:
+                        150,
+
+                    y:
+                        150,
+
+                    color:
+                        PLAYER_COLORS[0],
+
+                    carrying:
+                        null,
+
+                    input: {
+
+                        up:
+                            false,
+
+                        down:
+                            false,
+
+                        left:
+                            false,
+
+                        right:
+                            false
+
+                    }
+
+                });
+
+
+                rooms.set(
+                    roomCode,
+                    room
+                );
+
+
+                socket.join(
+                    roomCode
+                );
+
+
+                socket.roomCode =
+                    roomCode;
+
+
+                socket.emit(
+                    "joined",
+                    {
+
+                        roomCode,
+
+                        playerId:
+                            socket.id,
+
+                        isHost:
+                            true
+
+                    }
+                );
+
+
+                broadcastState(
+                    room
+                );
 
             }
         );
 
 
-        /*
-        Join station.
-        */
+/* =========================================================
+   JOIN ROOM
+========================================================= */
 
         socket.on(
             "joinRoom",
             data => {
 
-                try {
+                if (
+                    !data ||
+                    !data.name ||
+                    !data.code
+                ) {
 
-                    const code =
-                        String(
-                            data &&
-                            data.code ||
-                            ""
-                        )
-                        .trim()
-                        .toUpperCase();
-
-
-                    const room =
-                        rooms[code];
-
-
-                    if (
-                        !room
-                    ) {
-
-                        socket.emit(
-                            "errorMessage",
-                            "Station not found."
-                        );
-
-                        return;
-
-                    }
-
-
-                    if (
-                        room.started
-                    ) {
-
-                        socket.emit(
-                            "errorMessage",
-                            "The shift has already started."
-                        );
-
-                        return;
-
-                    }
-
-
-                    const playerCount =
-                        Object.keys(
-                            room.players
-                        ).length;
-
-
-                    if (
-                        playerCount >=
-                        MAX_PLAYERS
-                    ) {
-
-                        socket.emit(
-                            "errorMessage",
-                            "This station is full."
-                        );
-
-                        return;
-
-                    }
-
-
-                    const colors = [
-
-                        "#ff5555",
-
-                        "#4dabf7",
-
-                        "#51cf66",
-
-                        "#fcc419"
-
-                    ];
-
-
-                    socket.join(
-                        room.code
-                    );
-
-
-                    room.players[
-                        socket.id
-                    ] =
-                        createWorker(
-
-                            socket.id,
-
-                            sanitizeName(
-                                data.name
-                            ),
-
-                            160 +
-                            playerCount *
-                            30,
-
-                            300,
-
-                            "player",
-
-                            colors[
-                                playerCount
-                            ]
-
-                        );
-
-
-                    socket.emit(
-                        "joined",
-                        {
-
-                            roomCode:
-                                room.code,
-
-                            playerId:
-                                socket.id,
-
-                            isHost:
-                                false
-
-                        }
-                    );
-
-
-                    broadcastRoom(
-                        room
-                    );
-
-
-                    console.log(
-                        "Player joined:",
-                        room.code
-                    );
+                    return;
 
                 }
 
-                catch (
-                    error
-                ) {
 
-                    console.error(
-                        "Join room error:",
-                        error
+                const room =
+                    rooms.get(
+                        data.code
+                            .trim()
+                            .toUpperCase()
                     );
 
+
+                if (
+                    !room
+                ) {
 
                     socket.emit(
                         "errorMessage",
-                        "Could not join station."
+                        "Station not found."
                     );
 
+                    return;
+
                 }
+
+
+                if (
+                    room.started
+                ) {
+
+                    socket.emit(
+                        "errorMessage",
+                        "This shift has already started."
+                    );
+
+                    return;
+
+                }
+
+
+                if (
+                    room.players.length >=
+                    MAX_PLAYERS
+                ) {
+
+                    socket.emit(
+                        "errorMessage",
+                        "This station is full."
+                    );
+
+                    return;
+
+                }
+
+
+                const index =
+                    room.players.length;
+
+
+                room.players.push({
+
+                    id:
+                        socket.id,
+
+                    name:
+                        data.name
+                            .trim()
+                            .slice(
+                                0,
+                                20
+                            ),
+
+                    x:
+                        150 +
+                        index *
+                        25,
+
+                    y:
+                        150,
+
+                    color:
+                        PLAYER_COLORS[
+                            index
+                        ],
+
+                    carrying:
+                        null,
+
+                    input: {
+
+                        up:
+                            false,
+
+                        down:
+                            false,
+
+                        left:
+                            false,
+
+                        right:
+                            false
+
+                    }
+
+                });
+
+
+                socket.join(
+                    room.code
+                );
+
+
+                socket.roomCode =
+                    room.code;
+
+
+                socket.emit(
+                    "joined",
+                    {
+
+                        roomCode:
+                            room.code,
+
+                        playerId:
+                            socket.id,
+
+                        isHost:
+                            room.hostId ===
+                            socket.id
+
+                    }
+                );
+
+
+                broadcastState(
+                    room
+                );
 
             }
         );
 
 
-        /*
-        Start game.
-        */
+/* =========================================================
+   START GAME
+========================================================= */
 
         socket.on(
             "startGame",
             () => {
 
                 const room =
-                    findRoomByPlayer(
-                        socket.id
+                    rooms.get(
+                        socket.roomCode
                     );
 
 
@@ -2891,7 +892,12 @@ io.on(
                     true;
 
 
-                broadcastRoom(
+                spawnCustomer(
+                    room
+                );
+
+
+                broadcastState(
                     room
                 );
 
@@ -2899,17 +905,17 @@ io.on(
         );
 
 
-        /*
-        Movement.
-        */
+/* =========================================================
+   PLAYER INPUT
+========================================================= */
 
         socket.on(
             "input",
             input => {
 
                 const room =
-                    findRoomByPlayer(
-                        socket.id
+                    rooms.get(
+                        socket.roomCode
                     );
 
 
@@ -2923,9 +929,11 @@ io.on(
 
 
                 const player =
-                    room.players[
-                        socket.id
-                    ];
+                    room.players.find(
+                        p =>
+                            p.id ===
+                            socket.id
+                    );
 
 
                 if (
@@ -2937,38 +945,30 @@ io.on(
                 }
 
 
-                player.input.up =
-                    !!input.up;
-
-                player.input.down =
-                    !!input.down;
-
-                player.input.left =
-                    !!input.left;
-
-                player.input.right =
-                    !!input.right;
+                player.input =
+                    input || {};
 
             }
         );
 
 
-        /*
-        Interaction.
-        */
+/* =========================================================
+   PLAYER INTERACTION
+========================================================= */
 
         socket.on(
             "interact",
             () => {
 
                 const room =
-                    findRoomByPlayer(
-                        socket.id
+                    rooms.get(
+                        socket.roomCode
                     );
 
 
                 if (
-                    !room
+                    !room ||
+                    !room.started
                 ) {
 
                     return;
@@ -2977,37 +977,47 @@ io.on(
 
 
                 const player =
-                    room.players[
-                        socket.id
-                    ];
+                    room.players.find(
+                        p =>
+                            p.id ===
+                            socket.id
+                    );
 
 
                 if (
-                    player
+                    !player
                 ) {
 
-                    interact(
-                        room,
-                        player
-                    );
+                    return;
 
                 }
+
+
+                handlePlayerInteraction(
+                    room,
+                    player
+                );
+
+
+                broadcastState(
+                    room
+                );
 
             }
         );
 
 
-        /*
-        Hire bot.
-        */
+/* =========================================================
+   HIRE BOT
+========================================================= */
 
         socket.on(
             "hireBot",
             () => {
 
                 const room =
-                    findRoomByPlayer(
-                        socket.id
+                    rooms.get(
+                        socket.roomCode
                     );
 
 
@@ -3022,29 +1032,33 @@ io.on(
 
 
                 if (
-                    room.money <
-                    50
+                    room.bots.length >=
+                    room.upgrades.employees
                 ) {
+
+                    socket.emit(
+                        "errorMessage",
+                        "You need more employee capacity."
+                    );
 
                     return;
 
                 }
 
 
-                const botCount =
-                    Object.keys(
-                        room.bots
-                    ).length;
+                const cost =
+                    50;
 
 
                 if (
-                    botCount >=
-                    Math.min(
-                        MAX_BOTS,
-                        room.upgrades
-                            .employees
-                    )
+                    room.money <
+                    cost
                 ) {
+
+                    socket.emit(
+                        "errorMessage",
+                        "You need $50 to hire a worker."
+                    );
 
                     return;
 
@@ -3052,34 +1066,41 @@ io.on(
 
 
                 room.money -=
-                    50;
+                    cost;
 
 
-                const id =
-                    "bot_" +
-                    room.nextBotId++;
+                room.bots.push({
 
+                    id:
+                        "bot-" +
+                        room.nextBotId++,
 
-                room.bots[id] =
-                    createWorker(
-
-                        id,
-
-                        "Employee " +
+                    name:
+                        "Worker " +
                         room.nextBotId,
 
-                        320,
+                    x:
+                        170,
 
-                        300,
+                    y:
+                        150,
 
-                        "bot",
+                    carrying:
+                        null,
 
-                        "#b36bff"
+                    task:
+                        null,
 
-                    );
+                    state:
+                        "idle",
+
+                    target:
+                        null
+
+                });
 
 
-                broadcastRoom(
+                broadcastState(
                     room
                 );
 
@@ -3087,113 +1108,17 @@ io.on(
         );
 
 
-        /*
-        Upgrades.
-        */
+/* =========================================================
+   UPGRADE
+========================================================= */
 
         socket.on(
             "upgrade",
             type => {
 
                 const room =
-                    findRoomByPlayer(
-                        socket.id
-                    );
-
-
-                if (
-                    !room ||
-                    !room.started
-                ) {
-
-                    return;
-
-                }
-
-
-                if (
-                    type ===
-                    "pump" &&
-
-                    room.money >=
-                    250 &&
-
-                    room.upgrades.pumps <
-                    4
-                ) {
-
-                    room.money -=
-                        250;
-
-                    room.upgrades.pumps++;
-
-                }
-
-
-                else if (
-                    type ===
-                    "shelves" &&
-
-                    room.money >=
-                    200
-                ) {
-
-                    room.money -=
-                        200;
-
-                    room.upgrades.shelves++;
-
-                    room.maxStock +=
-                        25;
-
-                }
-
-
-                else if (
-                    type ===
-                    "employees" &&
-
-                    room.money >=
-                    300 &&
-
-                    room.upgrades.employees <
-                    MAX_BOTS
-                ) {
-
-                    room.money -=
-                        300;
-
-                    room.upgrades.employees++;
-
-                }
-
-
-                broadcastRoom(
-                    room
-                );
-
-            }
-        );
-
-
-        /*
-        Disconnect.
-        */
-
-        socket.on(
-            "disconnect",
-            reason => {
-
-                console.log(
-                    "Disconnected:",
-                    socket.id,
-                    reason
-                );
-
-
-                const room =
-                    findRoomByPlayer(
-                        socket.id
+                    rooms.get(
+                        socket.roomCode
                     );
 
 
@@ -3206,31 +1131,1676 @@ io.on(
                 }
 
 
-                const player =
-                    room.players[
-                        socket.id
-                    ];
+                let cost =
+                    0;
 
 
                 if (
-                    player
+                    type ===
+                    "pump"
                 ) {
 
-                    releaseWorkerTask(
+                    if (
+                        room.upgrades.pumps >=
+                        4
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    cost =
+                        250;
+
+                }
+
+
+                if (
+                    type ===
+                    "shelves"
+                ) {
+
+                    cost =
+                        200;
+
+                }
+
+
+                if (
+                    type ===
+                    "employees"
+                ) {
+
+                    cost =
+                        300;
+
+                }
+
+
+                if (
+                    room.money <
+                    cost
+                ) {
+
+                    socket.emit(
+                        "errorMessage",
+                        "Not enough money."
+                    );
+
+                    return;
+
+                }
+
+
+                room.money -=
+                    cost;
+
+
+                if (
+                    type ===
+                    "pump"
+                ) {
+
+                    room.upgrades.pumps++;
+
+                }
+
+
+                if (
+                    type ===
+                    "shelves"
+                ) {
+
+                    room.upgrades.shelves++;
+
+                    room.maxStock +=
+                        20;
+
+                }
+
+
+                if (
+                    type ===
+                    "employees"
+                ) {
+
+                    room.upgrades.employees++;
+
+                }
+
+
+                broadcastState(
+                    room
+                );
+
+            }
+        );
+
+
+    }
+);
+
+
+/* =========================================================
+   PLAYER MOVEMENT
+========================================================= */
+
+function updatePlayers(
+    room
+) {
+
+    for (
+        const player of
+        room.players
+    ) {
+
+        const input =
+            player.input ||
+            {};
+
+
+        let dx =
+            0;
+
+        let dy =
+            0;
+
+
+        if (
+            input.up
+        ) {
+
+            dy -=
+                1;
+
+        }
+
+
+        if (
+            input.down
+        ) {
+
+            dy +=
+                1;
+
+        }
+
+
+        if (
+            input.left
+        ) {
+
+            dx -=
+                1;
+
+        }
+
+
+        if (
+            input.right
+        ) {
+
+            dx +=
+                1;
+
+        }
+
+
+        if (
+            dx !==
+            0 ||
+            dy !==
+            0
+        ) {
+
+            const length =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            player.x +=
+                (
+                    dx /
+                    length
+                ) *
+                PLAYER_SPEED;
+
+
+            player.y +=
+                (
+                    dy /
+                    length
+                ) *
+                PLAYER_SPEED;
+
+        }
+
+
+        player.x =
+            Math.max(
+                10,
+                Math.min(
+                    630,
+                    player.x
+                )
+            );
+
+
+        player.y =
+            Math.max(
+                10,
+                Math.min(
+                    305,
+                    player.y
+                )
+            );
+
+    }
+
+}
+
+
+/* =========================================================
+   CUSTOMER SPAWNING
+========================================================= */
+
+function spawnCustomer(
+    room
+) {
+
+    if (
+        room.customers.length >=
+        12
+    ) {
+
+        return;
+
+    }
+
+
+    const types = [
+
+        "fuel",
+
+        "shop",
+
+        "fuelShop",
+
+        "restroom"
+
+    ];
+
+
+    const type =
+        types[
+            Math.floor(
+                Math.random() *
+                types.length
+            )
+        ];
+
+
+    const customer = {
+
+        id:
+            "customer-" +
+            room.nextCustomerId++,
+
+        x:
+            620,
+
+        y:
+            320,
+
+        type,
+
+        state:
+            "entering",
+
+        target:
+            null,
+
+        patience:
+            100,
+
+        fuelProgress:
+            0,
+
+        shopProgress:
+            0,
+
+        timer:
+            0,
+
+        pump:
+            null
+
+    };
+
+
+    room.customers.push(
+        customer
+    );
+
+}
+
+
+/* =========================================================
+   CUSTOMER AI
+========================================================= */
+
+function updateCustomers(
+    room
+) {
+
+    for (
+        let i =
+            room.customers.length -
+            1;
+
+        i >=
+        0;
+
+        i--
+    ) {
+
+        const customer =
+            room.customers[i];
+
+
+        customer.timer++;
+
+
+        /*
+        ENTERING
+        */
+
+        if (
+            customer.state ===
+            "entering"
+        ) {
+
+            customer.target = {
+
+                x:
+                    330,
+
+                y:
+                    280
+
+            };
+
+
+            if (
+                moveToward(
+                    customer,
+                    customer.target,
+                    CUSTOMER_SPEED
+                )
+            ) {
+
+                if (
+                    customer.type ===
+                    "fuel"
+                ) {
+
+                    assignPump(
                         room,
-                        player
+                        customer
+                    );
+
+                }
+
+                else if (
+                    customer.type ===
+                    "shop"
+                ) {
+
+                    customer.state =
+                        "walkingShop";
+
+                }
+
+                else if (
+                    customer.type ===
+                    "fuelShop"
+                ) {
+
+                    assignPump(
+                        room,
+                        customer
+                    );
+
+                }
+
+                else if (
+                    customer.type ===
+                    "restroom"
+                ) {
+
+                    customer.state =
+                        "walkingRestroom";
+
+                }
+
+            }
+
+        }
+
+
+        /*
+        WALK TO SHOP
+        */
+
+        if (
+            customer.state ===
+            "walkingShop"
+        ) {
+
+            customer.target =
+                LOCATIONS.shelves;
+
+
+            if (
+                moveToward(
+                    customer,
+                    customer.target,
+                    CUSTOMER_SPEED
+                )
+            ) {
+
+                customer.state =
+                    "shopping";
+
+            }
+
+        }
+
+
+        /*
+        SHOPPING
+        */
+
+        if (
+            customer.state ===
+            "shopping"
+        ) {
+
+            if (
+                room.stock >
+                0
+            ) {
+
+                if (
+                    customer.timer %
+                    20 ===
+                    0
+                ) {
+
+                    customer.shopProgress +=
+                        10;
+
+                }
+
+
+                if (
+                    customer.shopProgress >=
+                    100
+                ) {
+
+                    room.stock--;
+
+                    room.money +=
+                        8;
+
+                    room.stats.customersServed++;
+
+                    customer.state =
+                        "leaving";
+
+                }
+
+            }
+
+            else {
+
+                customer.patience -=
+                    1;
+
+            }
+
+        }
+
+
+        /*
+        WALK TO RESTROOM
+        */
+
+        if (
+            customer.state ===
+            "walkingRestroom"
+        ) {
+
+            customer.target =
+                LOCATIONS.restroom;
+
+
+            if (
+                moveToward(
+                    customer,
+                    customer.target,
+                    CUSTOMER_SPEED
+                )
+            ) {
+
+                customer.state =
+                    "usingRestroom";
+
+            }
+
+        }
+
+
+        /*
+        RESTROOM
+        */
+
+        if (
+            customer.state ===
+            "usingRestroom"
+        ) {
+
+            if (
+                customer.timer %
+                20 ===
+                0
+            ) {
+
+                customer.patience -=
+                    1;
+
+            }
+
+
+            if (
+                customer.timer >
+                100
+            ) {
+
+                customer.state =
+                    "leaving";
+
+                room.money +=
+                    3;
+
+                room.stats.customersServed++;
+
+            }
+
+        }
+
+
+        /*
+        FUELING
+        */
+
+        if (
+            customer.state ===
+            "fueling"
+        ) {
+
+            if (
+                room.fuel >
+                0
+            ) {
+
+                if (
+                    customer.timer %
+                    5 ===
+                    0
+                ) {
+
+                    room.fuel--;
+
+                    customer.fuelProgress +=
+                        5;
+
+                }
+
+
+                if (
+                    customer.fuelProgress >=
+                    100
+                ) {
+
+                    room.money +=
+                        15;
+
+                    room.stats.customersServed++;
+
+
+                    if (
+                        customer.type ===
+                        "fuelShop"
+                    ) {
+
+                        customer.state =
+                            "walkingShop";
+
+                        customer.timer =
+                            0;
+
+                    }
+
+                    else {
+
+                        customer.state =
+                            "leaving";
+
+                    }
+
+                }
+
+            }
+
+            else {
+
+                customer.patience -=
+                    1;
+
+            }
+
+        }
+
+
+        /*
+        WAITING FOR PUMP
+        */
+
+        if (
+            customer.state ===
+            "waitingPump"
+        ) {
+
+            customer.patience -=
+                0.1;
+
+
+            if (
+                customer.patience <=
+                0
+            ) {
+
+                room.stats.customersLost++;
+
+                customer.state =
+                    "leaving";
+
+            }
+
+        }
+
+
+        /*
+        LEAVING
+        */
+
+        if (
+            customer.state ===
+            "leaving"
+        ) {
+
+            customer.target = {
+
+                x:
+                    650,
+
+                y:
+                    320
+
+            };
+
+
+            moveToward(
+                customer,
+                customer.target,
+                CUSTOMER_SPEED
+            );
+
+
+            if (
+                customer.x >
+                640
+            ) {
+
+                room.customers.splice(
+                    i,
+                    1
+                );
+
+            }
+
+        }
+
+
+        /*
+        PATIENCE
+        */
+
+        if (
+            customer.state !==
+            "leaving"
+        ) {
+
+            if (
+                customer.timer %
+                60 ===
+                0
+            ) {
+
+                customer.patience -=
+                    0.5;
+
+            }
+
+
+            if (
+                customer.patience <=
+                0
+            ) {
+
+                room.stats.customersLost++;
+
+                customer.state =
+                    "leaving";
+
+            }
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   PUMP ASSIGNMENT
+========================================================= */
+
+function assignPump(
+    room,
+    customer
+) {
+
+    const occupied =
+        room.customers
+            .filter(
+                c =>
+                    c.pump !==
+                    null &&
+                    c.state !==
+                    "leaving"
+            )
+            .map(
+                c =>
+                    c.pump
+            );
+
+
+    for (
+        let i = 0;
+
+        i <
+        room.upgrades.pumps;
+
+        i++
+    ) {
+
+        if (
+            !occupied.includes(
+                i
+            )
+        ) {
+
+            customer.pump =
+                i;
+
+
+            customer.target =
+                LOCATIONS.pumps[i];
+
+
+            customer.state =
+                "walkingPump";
+
+
+            return;
+
+        }
+
+    }
+
+
+    customer.state =
+        "waitingPump";
+
+}
+
+
+function updateCustomerPumps(
+    room
+) {
+
+    for (
+        const customer of
+        room.customers
+    ) {
+
+        if (
+            customer.state ===
+            "walkingPump"
+        ) {
+
+            if (
+                !customer.target
+            ) {
+
+                continue;
+
+            }
+
+
+            if (
+                moveToward(
+                    customer,
+                    customer.target,
+                    CUSTOMER_SPEED
+                )
+            ) {
+
+                customer.state =
+                    "fueling";
+
+                customer.timer =
+                    0;
+
+            }
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   PLAYER INTERACTION
+========================================================= */
+
+function handlePlayerInteraction(
+    room,
+    player
+) {
+
+    /*
+    Pick up delivery box.
+    */
+
+    if (
+        room.delivery.truckArrived &&
+        room.delivery.boxes >
+        0 &&
+        distance(
+            player,
+            LOCATIONS.delivery
+        ) <
+        40
+    ) {
+
+        if (
+            !player.carrying
+        ) {
+
+            player.carrying =
+                "deliveryBox";
+
+            room.delivery.boxes--;
+
+            return;
+
+        }
+
+    }
+
+
+    /*
+    Put delivery box into storage.
+    */
+
+    if (
+        player.carrying ===
+        "deliveryBox" &&
+        distance(
+            player,
+            LOCATIONS.storage
+        ) <
+        40
+    ) {
+
+        if (
+            room.stock <
+            room.maxStock
+        ) {
+
+            room.stock +=
+                10;
+
+            player.carrying =
+                null;
+
+            return;
+
+        }
+
+    }
+
+
+    /*
+    Clean.
+    */
+
+    if (
+        distance(
+            player,
+            LOCATIONS.cleaning
+        ) <
+        40
+    ) {
+
+        room.cleanliness =
+            Math.min(
+                100,
+                room.cleanliness +
+                10
+            );
+
+        return;
+
+    }
+
+
+    /*
+    Order delivery.
+    */
+
+    if (
+        distance(
+            player,
+            LOCATIONS.delivery
+        ) <
+        50
+    ) {
+
+        orderDelivery(
+            room
+        );
+
+        return;
+
+    }
+
+
+    /*
+    Restock shelves.
+    */
+
+    if (
+        distance(
+            player,
+            LOCATIONS.shelves
+        ) <
+        40
+    ) {
+
+        if (
+            room.stock >
+            0
+        ) {
+
+            room.stock =
+                Math.max(
+                    0,
+                    room.stock -
+                    1
+                );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   DELIVERY SYSTEM
+========================================================= */
+
+function orderDelivery(
+    room
+) {
+
+    if (
+        room.delivery.ordered
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        room.money <
+        30
+    ) {
+
+        return;
+
+    }
+
+
+    room.money -=
+        30;
+
+
+    room.delivery.ordered =
+        true;
+
+
+    room.delivery.truckArrived =
+        false;
+
+
+    setTimeout(
+        () => {
+
+            if (
+                !rooms.has(
+                    room.code
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            room.delivery.truckArrived =
+                true;
+
+
+            room.delivery.boxes =
+                DELIVERY_BOXES_PER_TRUCK;
+
+
+            room.stats.deliveries++;
+
+
+            broadcastState(
+                room
+            );
+
+        },
+
+        8000
+    );
+
+}
+
+
+/* =========================================================
+   BOT AI
+========================================================= */
+
+function updateBots(
+    room
+) {
+
+    for (
+        const bot of
+        room.bots
+    ) {
+
+        /*
+        If carrying a box,
+        take it to storage.
+        */
+
+        if (
+            bot.carrying ===
+            "deliveryBox"
+        ) {
+
+            bot.task =
+                "unloading";
+
+
+            bot.target =
+                LOCATIONS.storage;
+
+
+            if (
+                moveToward(
+                    bot,
+                    bot.target,
+                    BOT_SPEED
+                )
+            ) {
+
+                if (
+                    room.stock <
+                    room.maxStock
+                ) {
+
+                    room.stock +=
+                        10;
+
+                }
+
+
+                bot.carrying =
+                    null;
+
+                bot.task =
+                    null;
+
+            }
+
+
+            continue;
+
+        }
+
+
+        /*
+        Pick up delivery box.
+        */
+
+        if (
+            room.delivery.truckArrived &&
+            room.delivery.boxes >
+            0
+        ) {
+
+            bot.task =
+                "delivery";
+
+
+            bot.target =
+                LOCATIONS.delivery;
+
+
+            if (
+                moveToward(
+                    bot,
+                    bot.target,
+                    BOT_SPEED
+                )
+            ) {
+
+                bot.carrying =
+                    "deliveryBox";
+
+            }
+
+
+            continue;
+
+        }
+
+
+        /*
+        Clean if station is dirty.
+        */
+
+        if (
+            room.cleanliness <
+            70
+        ) {
+
+            bot.task =
+                "cleaning";
+
+
+            bot.target =
+                LOCATIONS.cleaning;
+
+
+            if (
+                moveToward(
+                    bot,
+                    bot.target,
+                    BOT_SPEED
+                )
+            ) {
+
+                room.cleanliness =
+                    Math.min(
+                        100,
+                        room.cleanliness +
+                        1
+                    );
+
+            }
+
+
+            continue;
+
+        }
+
+
+        /*
+        Help with customers.
+        */
+
+        const customer =
+            room.customers.find(
+                c =>
+                    c.state ===
+                    "waitingPump"
+            );
+
+
+        if (
+            customer
+        ) {
+
+            bot.task =
+                "customer";
+
+
+            bot.target = {
+
+                x:
+                    customer.x,
+
+                y:
+                    customer.y
+
+            };
+
+
+            if (
+                moveToward(
+                    bot,
+                    bot.target,
+                    BOT_SPEED
+                )
+            ) {
+
+                if (
+                    room.fuel >
+                    0
+                ) {
+
+                    room.fuel--;
+
+                    customer.fuelProgress +=
+                        5;
+
+
+                    if (
+                        customer.fuelProgress >=
+                        100
+                    ) {
+
+                        room.money +=
+                            15;
+
+                        room.stats.customersServed++;
+
+                        customer.state =
+                            "leaving";
+
+                    }
+
+                }
+
+            }
+
+
+            continue;
+
+        }
+
+
+        /*
+        Restock if stock is low.
+        */
+
+        if (
+            room.stock <
+            room.maxStock *
+            0.3
+        ) {
+
+            bot.task =
+                "restock";
+
+
+            bot.target =
+                LOCATIONS.shelves;
+
+
+            if (
+                moveToward(
+                    bot,
+                    bot.target,
+                    BOT_SPEED
+                )
+            ) {
+
+                if (
+                    room.stock <
+                    room.maxStock
+                ) {
+
+                    room.stock++;
+
+                }
+
+            }
+
+
+            continue;
+
+        }
+
+
+        /*
+        Idle.
+        */
+
+        bot.task =
+            "idle";
+
+        bot.target =
+            null;
+
+    }
+
+}
+
+
+/* =========================================================
+   RANDOM MESSES
+========================================================= */
+
+function createMess(
+    room
+) {
+
+    if (
+        room.tasks.length >=
+        5
+    ) {
+
+        return;
+
+    }
+
+
+    room.tasks.push({
+
+        id:
+            room.nextTaskId++,
+
+        type:
+            "clean",
+
+        x:
+            60 +
+            Math.random() *
+            220,
+
+        y:
+            100 +
+            Math.random() *
+            150
+
+    });
+
+}
+
+
+function updateTasks(
+    room
+) {
+
+    for (
+        const task of
+        room.tasks
+    ) {
+
+        /*
+        Bots can clean tasks.
+        */
+
+        const bot =
+            room.bots.find(
+                b =>
+                    b.task ===
+                    "cleaning"
+            );
+
+
+        if (
+            bot &&
+            distance(
+                bot,
+                task
+            ) <
+            25
+        ) {
+
+            const index =
+                room.tasks.indexOf(
+                    task
+                );
+
+
+            if (
+                index !==
+                -1
+            ) {
+
+                room.tasks.splice(
+                    index,
+                    1
+                );
+
+                room.cleanliness =
+                    Math.min(
+                        100,
+                        room.cleanliness +
+                        10
+                    );
+
+            }
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   GAME LOOP
+========================================================= */
+
+setInterval(
+    () => {
+
+        for (
+            const room of
+            rooms.values()
+        ) {
+
+            if (
+                !room.started
+            ) {
+
+                continue;
+
+            }
+
+
+            updatePlayers(
+                room
+            );
+
+
+            updateCustomerPumps(
+                room
+            );
+
+
+            updateCustomers(
+                room
+            );
+
+
+            updateBots(
+                room
+            );
+
+
+            updateTasks(
+                room
+            );
+
+
+            /*
+            Spawn customers.
+            */
+
+            if (
+                Math.random() <
+                0.015
+            ) {
+
+                spawnCustomer(
+                    room
+                );
+
+            }
+
+
+            /*
+            Random mess.
+            */
+
+            if (
+                Math.random() <
+                0.002
+            ) {
+
+                createMess(
+                    room
+                );
+
+            }
+
+
+            /*
+            Automatic cleanliness decay.
+            */
+
+            if (
+                Math.random() <
+                0.003
+            ) {
+
+                room.cleanliness =
+                    Math.max(
+                        0,
+                        room.cleanliness -
+                        1
+                    );
+
+            }
+
+
+            /*
+            Delivery finished.
+            */
+
+            if (
+                room.delivery.truckArrived &&
+                room.delivery.boxes <=
+                0
+            ) {
+
+                room.delivery.ordered =
+                    false;
+
+                room.delivery.truckArrived =
+                    false;
+
+            }
+
+        }
+
+    },
+
+    1000 / 20
+);
+
+
+/* =========================================================
+   BROADCAST LOOP
+========================================================= */
+
+setInterval(
+    () => {
+
+        for (
+            const room of
+            rooms.values()
+        ) {
+
+            if (
+                room.started
+            ) {
+
+                broadcastState(
+                    room
+                );
+
+            }
+
+        }
+
+    },
+
+    100
+);
+
+
+/* =========================================================
+   DISCONNECT
+========================================================= */
+
+io.on(
+    "connection",
+    socket => {
+
+        socket.on(
+            "disconnect",
+            () => {
+
+                const room =
+                    rooms.get(
+                        socket.roomCode
+                    );
+
+
+                if (
+                    !room
+                ) {
+
+                    return;
+
+                }
+
+
+                const index =
+                    room.players.findIndex(
+                        player =>
+                            player.id ===
+                            socket.id
+                    );
+
+
+                if (
+                    index !==
+                    -1
+                ) {
+
+                    room.players.splice(
+                        index,
+                        1
                     );
 
                 }
 
 
-                delete room.players[
-                    socket.id
-                ];
-
-
                 /*
-                Transfer host.
+                If host leaves,
+                give host to another player.
                 */
 
                 if (
@@ -3238,27 +2808,21 @@ io.on(
                     socket.id
                 ) {
 
-                    const remaining =
-                        Object.keys(
-                            room.players
-                        );
-
-
                     if (
-                        remaining.length >
+                        room.players.length >
                         0
                     ) {
 
                         room.hostId =
-                            remaining[0];
+                            room.players[0].id;
 
                     }
 
                     else {
 
-                        delete rooms[
+                        rooms.delete(
                             room.code
-                        ];
+                        );
 
                         return;
 
@@ -3267,7 +2831,7 @@ io.on(
                 }
 
 
-                broadcastRoom(
+                broadcastState(
                     room
                 );
 
@@ -3278,83 +2842,9 @@ io.on(
 );
 
 
-/* =====================================================
-   GAME LOOP
-===================================================== */
-
-setInterval(
-    () => {
-
-        for (
-            const room of
-            Object.values(rooms)
-        ) {
-
-            updateRoom(
-                room
-            );
-
-        }
-
-    },
-    1000 /
-    SIMULATION_RATE
-);
-
-
-/* =====================================================
-   NETWORK LOOP
-===================================================== */
-
-setInterval(
-    () => {
-
-        for (
-            const room of
-            Object.values(rooms)
-        ) {
-
-            broadcastRoom(
-                room
-            );
-
-        }
-
-    },
-    1000 /
-    NETWORK_RATE
-);
-
-
-/* =====================================================
-   EXPRESS
-===================================================== */
-
-app.use(
-    express.static(
-        __dirname
-    )
-);
-
-
-app.get(
-    "/",
-    (req, res) => {
-
-        res.sendFile(
-            path.join(
-                __dirname,
-                "index.html"
-            )
-        );
-
-    }
-);
-
-
-/* =====================================================
-   SERVER START
-===================================================== */
+/* =========================================================
+   SERVER
+========================================================= */
 
 server.listen(
     PORT,
