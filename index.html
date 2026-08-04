@@ -1,839 +1,503 @@
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
->
-
-<title>Octane: Gas station simulator</title>
+<title>Octane</title>
 
 <style>
 
 * {
     box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
 }
 
-html,
 body {
-
     margin: 0;
-
-    width: 100%;
-
-    height: 100%;
-
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
     overflow: hidden;
-
-    background:
-        #111;
-
-    color:
-        white;
-
-    font-family:
-        Arial,
-        sans-serif;
-
-}
-
-body {
-
-    display:
-        flex;
-
-    justify-content:
-        center;
-
-    align-items:
-        center;
-
 }
 
 button,
 input {
-
-    font-family:
-        inherit;
-
+    font: inherit;
 }
 
 button {
-
-    border:
-        0;
-
-    border-radius:
-        8px;
-
-    padding:
-        10px 16px;
-
-    font-weight:
-        bold;
-
-    cursor:
-        pointer;
-
-    background:
-        #e53935;
-
-    color:
-        white;
-
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: #1971c2;
+    color: white;
 }
 
 button:hover {
-
-    filter:
-        brightness(1.15);
-
+    filter: brightness(1.15);
 }
 
-button:active {
-
-    transform:
-        scale(0.96);
-
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-input {
 
-    padding:
-        10px;
+/* =========================================================
+   LOBBY
+========================================================= */
 
-    border:
-        0;
-
-    border-radius:
-        7px;
-
-    width:
-        220px;
-
+#lobby {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     background:
-        #222;
-
-    color:
-        white;
-
-    outline:
-        none;
-
+        radial-gradient(
+            circle at center,
+            #252525,
+            #080808
+        );
+    z-index: 20;
 }
 
-
-/* =====================================================
-   SCREENS
-===================================================== */
-
-.screen {
-
-    position:
-        absolute;
-
-    inset:
-        0;
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        center;
-
-    background:
-        #111;
-
-}
-
-.hidden {
-
-    display:
-        none !important;
-
-}
-
-
-/* =====================================================
-   MENU
-===================================================== */
-
-.menu {
-
-    width:
-        min(92vw, 420px);
-
-    padding:
-        30px;
-
-    text-align:
-        center;
-
-    background:
-        #1d1d1d;
-
-    border-radius:
-        14px;
-
+.lobby-box {
+    width: min(420px, 92vw);
+    background: #1b1b1b;
+    border: 1px solid #444;
+    border-radius: 16px;
+    padding: 30px;
+    text-align: center;
+    box-shadow:
+        0 10px 40px
+        rgba(0,0,0,0.6);
 }
 
 .logo {
-
-    font-size:
-        52px;
-
-    font-weight:
-        900;
-
-    letter-spacing:
-        4px;
-
-    color:
-        #ff4b3e;
-
-    margin-bottom:
-        4px;
-
+    font-size: 42px;
+    font-weight: bold;
+    margin-bottom: 5px;
 }
 
 .subtitle {
-
-    color:
-        #aaa;
-
-    margin-bottom:
-        25px;
-
+    color: #aaa;
+    margin-bottom: 25px;
 }
 
-.menu input {
-
-    display:
-        block;
-
-    width:
-        100%;
-
-    margin:
-        8px 0;
-
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 6px 0;
+    background: #101010;
+    color: white;
+    border: 1px solid #555;
+    border-radius: 8px;
+    outline: none;
 }
 
-.menu button {
-
-    width:
-        100%;
-
-    margin:
-        5px 0;
-
+input:focus {
+    border-color: #339af0;
 }
 
-#roomCodeInput {
-
-    text-transform:
-        uppercase;
-
+.lobby-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
 }
 
-#errorText {
-
-    min-height:
-        20px;
-
-    color:
-        #ff7777;
-
-    font-size:
-        14px;
-
+.lobby-buttons button {
+    flex: 1;
 }
 
-
-/* =====================================================
-   LOBBY
-===================================================== */
-
-.lobby {
-
-    width:
-        min(92vw, 500px);
-
-    padding:
-        30px;
-
-    background:
-        #1d1d1d;
-
-    border-radius:
-        14px;
-
-    text-align:
-        center;
-
+#roomInfo {
+    display: none;
+    margin-top: 20px;
+    padding: 15px;
+    background: #111;
+    border-radius: 10px;
 }
 
 .room-code {
-
-    font-size:
-        38px;
-
-    font-weight:
-        bold;
-
-    letter-spacing:
-        8px;
-
-    color:
-        #ffd43b;
-
-    margin:
-        15px 0;
-
-}
-
-#playerList {
-
-    background:
-        #111;
-
-    border-radius:
-        8px;
-
-    padding:
-        12px;
-
-    margin:
-        15px 0;
-
-    text-align:
-        left;
-
-}
-
-.player-entry {
-
-    padding:
-        7px;
-
-    border-bottom:
-        1px solid #333;
-
-}
-
-.player-entry:last-child {
-
-    border-bottom:
-        none;
-
-}
-
-.host {
-
-    color:
-        #ffd43b;
-
+    font-size: 28px;
+    font-weight: bold;
+    letter-spacing: 5px;
+    margin: 8px;
 }
 
 
-/* =====================================================
+/* =========================================================
    GAME
-===================================================== */
+========================================================= */
 
-#gameScreen {
-
-    background:
-        #111;
-
-    flex-direction:
-        column;
-
+#game {
+    display: none;
+    width: 100vw;
+    height: 100vh;
 }
 
-#gameCanvas {
-
-    width:
-        min(100vw, 640px);
-
-    height:
-        auto;
-
-    max-height:
-        calc(100vh - 85px);
-
-    aspect-ratio:
-        16 / 9;
-
-    image-rendering:
-        auto;
-
-    background:
-        #87a96b;
-
-    touch-action:
-        none;
-
-}
-
-
-/* =====================================================
-   HUD
-===================================================== */
-
-#hud {
-
-    width:
-        min(100vw, 640px);
-
-    height:
-        85px;
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        space-around;
-
-    background:
-        #181818;
-
-    font-size:
-        13px;
-
-    z-index:
-        10;
-
+#topbar {
+    height: 64px;
+    background: #191919;
+    border-bottom: 1px solid #444;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 8px 14px;
+    overflow-x: auto;
+    white-space: nowrap;
 }
 
 .stat {
-
-    text-align:
-        center;
-
-    min-width:
-        55px;
-
-}
-
-.stat-value {
-
-    font-weight:
-        bold;
-
-    font-size:
-        16px;
-
+    display: flex;
+    flex-direction: column;
+    min-width: 75px;
 }
 
 .stat-label {
+    color: #888;
+    font-size: 11px;
+}
 
-    color:
-        #999;
+.stat-value {
+    font-weight: bold;
+    font-size: 16px;
+}
 
-    font-size:
-        10px;
+#gameArea {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 64px);
+    overflow: hidden;
+}
 
+#world {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 700px;
+    height: 360px;
+    transform: translate(-50%, -50%);
+    background: #6b6b6b;
+    border: 4px solid #222;
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 
-/* =====================================================
-   GAME BUTTONS
-===================================================== */
+/* =========================================================
+   STATION
+========================================================= */
 
-#gameButtons {
-
-    position:
-        absolute;
-
-    right:
-        10px;
-
-    bottom:
-        95px;
-
-    display:
-        flex;
-
-    flex-direction:
-        column;
-
-    gap:
-        7px;
-
+#store {
+    position: absolute;
+    left: 30px;
+    top: 45px;
+    width: 270px;
+    height: 235px;
+    background: #d9d9d9;
+    border: 4px solid #333;
+    border-radius: 8px;
 }
 
-.gameButton {
-
-    width:
-        52px;
-
-    height:
-        42px;
-
-    padding:
-        0;
-
-    background:
-        rgba(
-            0,
-            0,
-            0,
-            0.7
-        );
-
-    border:
-        1px solid
-        #555;
-
+#store::before {
+    content: "OCTANE MARKET";
+    position: absolute;
+    left: 0;
+    top: -35px;
+    width: 100%;
+    text-align: center;
+    color: white;
+    font-weight: bold;
+    font-size: 18px;
 }
 
-#interactButton {
-
-    background:
-        #e53935;
-
+.zone {
+    position: absolute;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 11px;
+    font-weight: bold;
+    color: #222;
 }
 
-
-/* =====================================================
-   TOUCH CONTROLS
-===================================================== */
-
-#touchControls {
-
-    display:
-        none;
-
-    position:
-        absolute;
-
-    left:
-        15px;
-
-    bottom:
-        95px;
-
-    width:
-        130px;
-
-    height:
-        130px;
-
+#register {
+    left: 85px;
+    top: 70px;
+    width: 70px;
+    height: 45px;
+    background: #ffd43b;
 }
 
-.touchButton {
-
-    position:
-        absolute;
-
-    width:
-        42px;
-
-    height:
-        42px;
-
-    padding:
-        0;
-
-    background:
-        rgba(
-            0,
-            0,
-            0,
-            0.65
-        );
-
-    border:
-        1px solid
-        #666;
-
-    user-select:
-        none;
-
-    touch-action:
-        none;
-
+#shelves {
+    left: 175px;
+    top: 70px;
+    width: 65px;
+    height: 80px;
+    background: #74c0fc;
 }
 
-#touchUp {
-
-    left:
-        44px;
-
-    top:
-        0;
-
+#storage {
+    left: 175px;
+    top: 165px;
+    width: 65px;
+    height: 50px;
+    background: #ffa94d;
 }
 
-#touchLeft {
-
-    left:
-        0;
-
-    top:
-        44px;
-
+#restroom {
+    left: 15px;
+    top: 165px;
+    width: 65px;
+    height: 50px;
+    background: #b197fc;
 }
 
-#touchRight {
-
-    right:
-        0;
-
-    top:
-        44px;
-
+#cleaning {
+    left: 15px;
+    top: 70px;
+    width: 55px;
+    height: 45px;
+    background: #69db7c;
 }
 
-#touchDown {
+#outside {
+    position: absolute;
+    left: 320px;
+    top: 0;
+    width: 380px;
+    height: 360px;
+    background: #555;
+}
 
-    left:
-        44px;
+#road {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 90px;
+    height: 360px;
+    background: #333;
+}
 
-    bottom:
-        0;
-
+#road::after {
+    content: "";
+    position: absolute;
+    left: 42px;
+    top: 0;
+    height: 100%;
+    border-left: 3px dashed #aaa;
 }
 
 
-@media (
-    pointer: coarse
-) {
+/* =========================================================
+   PUMPS
+========================================================= */
 
-    #touchControls {
+.pump {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    background: #e03131;
+    border: 3px solid #111;
+    border-radius: 8px;
+    color: white;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-        display:
-            block;
+#pump0 {
+    left: 355px;
+    top: 35px;
+}
 
-    }
+#pump1 {
+    left: 455px;
+    top: 35px;
+}
 
+#pump2 {
+    left: 355px;
+    top: 135px;
+}
+
+#pump3 {
+    left: 455px;
+    top: 135px;
 }
 
 
-/* =====================================================
-   CONNECTION
-===================================================== */
+/* =========================================================
+   DELIVERY
+========================================================= */
 
-#connectionStatus {
-
-    position:
-        absolute;
-
-    top:
-        8px;
-
-    left:
-        8px;
-
-    padding:
-        5px 8px;
-
-    border-radius:
-        5px;
-
-    background:
-        rgba(
-            0,
-            0,
-            0,
-            0.65
-        );
-
-    font-size:
-        11px;
-
-    z-index:
-        20;
-
+#deliveryArea {
+    position: absolute;
+    right: 105px;
+    bottom: 20px;
+    width: 100px;
+    height: 70px;
+    background: #7950f2;
+    border: 3px solid #222;
+    border-radius: 8px;
+    color: white;
+    font-size: 11px;
+    text-align: center;
+    padding-top: 10px;
 }
 
-.connected {
-
-    color:
-        #69db7c;
-
-}
-
-.disconnected {
-
-    color:
-        #ff6b6b;
-
+.delivery-box {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: #f08c00;
+    border: 2px solid #222;
+    border-radius: 2px;
 }
 
 
-/* =====================================================
-   HELP
-===================================================== */
+/* =========================================================
+   ENTITIES
+========================================================= */
 
-#helpText {
+.entity {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 10;
+}
 
-    position:
-        absolute;
+.player {
+    border-radius: 50%;
+    border: 2px solid white;
+}
 
-    left:
-        50%;
+.bot {
+    border-radius: 5px;
+    border: 2px solid #111;
+}
 
-    bottom:
-        88px;
+.customer {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    border: 2px solid #222;
+}
 
-    transform:
-        translateX(-50%);
-
-    padding:
-        6px 10px;
-
-    border-radius:
-        5px;
-
-    background:
-        rgba(
-            0,
-            0,
-            0,
-            0.7
-        );
-
-    font-size:
-        11px;
-
-    pointer-events:
-        none;
-
-    opacity:
-        0.8;
-
+.mess {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #8b4513;
+    border: 2px solid #222;
 }
 
 
-/* =====================================================
-   UPGRADE PANEL
-===================================================== */
+/* =========================================================
+   SIDE PANEL
+========================================================= */
 
-#upgradePanel {
-
-    position:
-        absolute;
-
-    left:
-        50%;
-
-    top:
-        50%;
-
-    transform:
-        translate(
-            -50%,
-            -50%
-        );
-
-    width:
-        min(
-            90vw,
-            320px
-        );
-
-    padding:
-        20px;
-
-    background:
-        #222;
-
-    border:
-        1px solid
-        #555;
-
-    border-radius:
-        12px;
-
-    z-index:
-        50;
-
+#panel {
+    position: fixed;
+    right: 10px;
+    top: 74px;
+    width: 210px;
+    max-height: calc(100vh - 84px);
+    overflow-y: auto;
+    background: rgba(20,20,20,0.95);
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 15;
 }
 
-#upgradePanel h2 {
-
-    margin-top:
-        0;
-
+.panel-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 8px;
 }
 
-.upgradeRow {
-
-    display:
-        flex;
-
-    justify-content:
-        space-between;
-
-    align-items:
-        center;
-
-    padding:
-        8px 0;
-
+.panel-section {
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
 }
 
-.upgradeRow button {
+.panel-section:last-child {
+    border-bottom: none;
+}
 
-    padding:
-        7px 10px;
+.panel-button {
+    width: 100%;
+    margin: 3px 0;
+    font-size: 12px;
+}
 
+#message {
+    position: fixed;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85);
+    padding: 10px 18px;
+    border-radius: 8px;
+    display: none;
+    z-index: 30;
 }
 
 
-/* =====================================================
+/* =========================================================
+   CONTROLS
+========================================================= */
+
+#controls {
+    position: fixed;
+    left: 10px;
+    bottom: 10px;
+    background: rgba(0,0,0,0.75);
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: #ccc;
+    font-size: 12px;
+    z-index: 15;
+}
+
+
+/* =========================================================
    MOBILE
-===================================================== */
+========================================================= */
 
 @media (
-    max-width: 500px
+    max-width: 700px
 ) {
 
-    .logo {
-
-        font-size:
-            42px;
-
+    #world {
+        transform:
+            translate(-50%, -50%)
+            scale(0.72);
     }
 
-    .menu {
-
-        padding:
-            24px;
-
+    #panel {
+        width: 165px;
+        font-size: 11px;
     }
 
-    #hud {
-
-        font-size:
-            11px;
-
-    }
-
-    .stat-value {
-
-        font-size:
-            14px;
-
+    #topbar {
+        gap: 10px;
     }
 
 }
 
 </style>
-
 </head>
 
 
@@ -841,107 +505,76 @@ input {
 
 
 <!-- =====================================================
-     MENU
-===================================================== -->
-
-<div
-    id="menuScreen"
-    class="screen"
->
-
-<div class="menu">
-
-<div class="logo">
-OCTANE
-</div>
-
-<div class="subtitle">
-Co-op Gas Station Simulator
-</div>
-
-
-<input
-    id="nameInput"
-    placeholder="Your name"
-    maxlength="20"
->
-
-
-<button
-    id="createButton"
->
-Create Station
-</button>
-
-
-<input
-    id="roomCodeInput"
-    placeholder="Room Code"
-    maxlength="4"
->
-
-
-<button
-    id="joinButton"
->
-Join Station
-</button>
-
-
-<div id="errorText"></div>
-
-</div>
-
-</div>
-
-
-<!-- =====================================================
      LOBBY
 ===================================================== -->
 
-<div
-    id="lobbyScreen"
-    class="screen hidden"
->
+<div id="lobby">
 
-<div class="lobby">
+    <div class="lobby-box">
 
-<h1>
-Station Lobby
-</h1>
+        <div class="logo">
+            ⛽ OCTANE
+        </div>
 
-<div>
-Room Code
-</div>
+        <div class="subtitle">
+            Run the station. Serve the customers.
+        </div>
 
-<div
-    id="roomCodeDisplay"
-    class="room-code"
->
-----
-</div>
+        <input
+            id="nameInput"
+            placeholder="Your name"
+            maxlength="20"
+        >
 
+        <button
+            id="createButton"
+            style="width:100%; margin-top:8px;"
+        >
+            Create Station
+        </button>
 
-<div id="playerList">
-Waiting for players...
-</div>
+        <div style="margin:15px 0; color:#777;">
+            OR
+        </div>
 
+        <input
+            id="roomInput"
+            placeholder="Station code"
+            maxlength="4"
+        >
 
-<button
-    id="startButton"
-    class="hidden"
->
-Start Shift
-</button>
+        <button
+            id="joinButton"
+            style="width:100%; margin-top:8px;"
+        >
+            Join Station
+        </button>
 
+        <div id="roomInfo">
 
-<div
-    id="waitingText"
->
-Waiting for the host...
-</div>
+            Station Code
 
-</div>
+            <div
+                class="room-code"
+                id="roomCodeDisplay"
+            >
+                ----
+            </div>
+
+            <div id="playerCount">
+                Players: 1 / 4
+            </div>
+
+            <button
+                id="startButton"
+                style="margin-top:12px;"
+            >
+                Start Shift
+            </button>
+
+        </div>
+
+    </div>
 
 </div>
 
@@ -950,367 +583,307 @@ Waiting for the host...
      GAME
 ===================================================== -->
 
-<div
-    id="gameScreen"
-    class="screen hidden"
->
+<div id="game">
+
+    <div id="topbar">
+
+        <div class="stat">
+            <span class="stat-label">
+                MONEY
+            </span>
+
+            <span
+                class="stat-value"
+                id="money"
+            >
+                $100
+            </span>
+        </div>
 
 
-<div id="connectionStatus">
-Connecting...
+        <div class="stat">
+            <span class="stat-label">
+                FUEL
+            </span>
+
+            <span
+                class="stat-value"
+                id="fuel"
+            >
+                50 / 100
+            </span>
+        </div>
+
+
+        <div class="stat">
+            <span class="stat-label">
+                STOCK
+            </span>
+
+            <span
+                class="stat-value"
+                id="stock"
+            >
+                20 / 40
+            </span>
+        </div>
+
+
+        <div class="stat">
+            <span class="stat-label">
+                CLEAN
+            </span>
+
+            <span
+                class="stat-value"
+                id="cleanliness"
+            >
+                100%
+            </span>
+        </div>
+
+
+        <div class="stat">
+            <span class="stat-label">
+                SERVED
+            </span>
+
+            <span
+                class="stat-value"
+                id="served"
+            >
+                0
+            </span>
+        </div>
+
+
+        <div class="stat">
+            <span class="stat-label">
+                LOST
+            </span>
+
+            <span
+                class="stat-value"
+                id="lost"
+            >
+                0
+            </span>
+        </div>
+
+    </div>
+
+
+    <div id="gameArea">
+
+        <div id="world">
+
+            <div id="store">
+
+                <div
+                    id="register"
+                    class="zone"
+                >
+                    REGISTER
+                </div>
+
+                <div
+                    id="shelves"
+                    class="zone"
+                >
+                    SHOP
+                </div>
+
+                <div
+                    id="storage"
+                    class="zone"
+                >
+                    STORAGE
+                </div>
+
+                <div
+                    id="restroom"
+                    class="zone"
+                >
+                    RESTROOM
+                </div>
+
+                <div
+                    id="cleaning"
+                    class="zone"
+                >
+                    CLEAN
+                </div>
+
+            </div>
+
+
+            <div id="outside"></div>
+
+            <div id="road"></div>
+
+
+            <div
+                class="pump"
+                id="pump0"
+            >
+                PUMP 1
+            </div>
+
+            <div
+                class="pump"
+                id="pump1"
+            >
+                PUMP 2
+            </div>
+
+            <div
+                class="pump"
+                id="pump2"
+            >
+                PUMP 3
+            </div>
+
+            <div
+                class="pump"
+                id="pump3"
+            >
+                PUMP 4
+            </div>
+
+
+            <div id="deliveryArea">
+                DELIVERY
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =================================================
+         SIDE PANEL
+    ================================================= -->
+
+    <div id="panel">
+
+        <div class="panel-section">
+
+            <div class="panel-title">
+                DELIVERY
+            </div>
+
+            <div id="deliveryStatus">
+                No delivery ordered
+            </div>
+
+            <button
+                class="panel-button"
+                id="deliveryButton"
+            >
+                Order Delivery ($30)
+            </button>
+
+        </div>
+
+
+        <div class="panel-section">
+
+            <div class="panel-title">
+                STAFF
+            </div>
+
+            <button
+                class="panel-button"
+                id="botButton"
+            >
+                Hire Worker ($50)
+            </button>
+
+        </div>
+
+
+        <div class="panel-section">
+
+            <div class="panel-title">
+                UPGRADES
+            </div>
+
+            <button
+                class="panel-button"
+                id="pumpUpgrade"
+            >
+                Add Pump ($250)
+            </button>
+
+            <button
+                class="panel-button"
+                id="shelfUpgrade"
+            >
+                Expand Storage ($200)
+            </button>
+
+            <button
+                class="panel-button"
+                id="employeeUpgrade"
+            >
+                More Staff ($300)
+            </button>
+
+        </div>
+
+
+        <div class="panel-section">
+
+            <div class="panel-title">
+                PLAYERS
+            </div>
+
+            <div id="playerList">
+                -
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div id="controls">
+        WASD / Arrow Keys: Move &nbsp;|&nbsp;
+        E: Interact
+    </div>
+
 </div>
 
 
-<canvas
-    id="gameCanvas"
-    width="640"
-    height="360"
-></canvas>
-
-
-<div id="helpText">
-WASD / Arrow Keys to move • E / Interact
-</div>
-
-
-<div id="gameButtons">
-
-<button
-    id="interactButton"
-    class="gameButton"
->
-E
-</button>
-
-<button
-    id="hireButton"
-    class="gameButton"
->
-🤖
-</button>
-
-<button
-    id="upgradeButton"
-    class="gameButton"
->
-⬆
-</button>
-
-</div>
-
-
-<div id="touchControls">
-
-<button
-    class="touchButton"
-    id="touchUp"
->
-▲
-</button>
-
-<button
-    class="touchButton"
-    id="touchLeft"
->
-◀
-</button>
-
-<button
-    class="touchButton"
-    id="touchRight"
->
-▶
-</button>
-
-<button
-    class="touchButton"
-    id="touchDown"
->
-▼
-</button>
-
-</div>
-
-
-<div id="hud">
-
-<div class="stat">
-
-<div
-    class="stat-value"
-    id="moneyValue"
->
-$100
-</div>
-
-<div class="stat-label">
-MONEY
-</div>
-
-</div>
-
-
-<div class="stat">
-
-<div
-    class="stat-value"
-    id="fuelValue"
->
-50
-</div>
-
-<div class="stat-label">
-FUEL
-</div>
-
-</div>
-
-
-<div class="stat">
-
-<div
-    class="stat-value"
-    id="stockValue"
->
-20
-</div>
-
-<div class="stat-label">
-STOCK
-</div>
-
-</div>
-
-
-<div class="stat">
-
-<div
-    class="stat-value"
-    id="cleanValue"
->
-100%
-</div>
-
-<div class="stat-label">
-CLEAN
-</div>
-
-</div>
-
-
-<div class="stat">
-
-<div
-    class="stat-value"
-    id="dayValue"
->
-DAY 1
-</div>
-
-<div class="stat-label">
-SHIFT
-</div>
-
-</div>
-
-</div>
-
-
-</div>
-
-
-<!-- =====================================================
-     UPGRADE PANEL
-===================================================== -->
-
-<div
-    id="upgradePanel"
-    class="hidden"
->
-
-<h2>
-Station Upgrades
-</h2>
-
-
-<div class="upgradeRow">
-
-<span>
-Add Pump ($250)
-</span>
-
-<button
-    data-upgrade="pump"
->
-BUY
-</button>
-
-</div>
-
-
-<div class="upgradeRow">
-
-<span>
-Bigger Shelves ($200)
-</span>
-
-<button
-    data-upgrade="shelves"
->
-BUY
-</button>
-
-</div>
-
-
-<div class="upgradeRow">
-
-<span>
-Hire Capacity ($300)
-</span>
-
-<button
-    data-upgrade="employees"
->
-BUY
-</button>
-
-</div>
-
-
-<button
-    id="closeUpgrade"
->
-Close
-</button>
-
-</div>
+<div id="message"></div>
 
 
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
 
-
-/* =====================================================
-   SOCKET
-===================================================== */
-
 const socket =
-    io({
-
-        transports: [
-            "polling",
-            "websocket"
-        ],
-
-        reconnection:
-            true,
-
-        reconnectionAttempts:
-            10,
-
-        reconnectionDelay:
-            1000
-
-    });
+    io();
 
 
-/* =====================================================
-   DOM
-===================================================== */
-
-const menuScreen =
-    document.getElementById(
-        "menuScreen"
-    );
-
-const lobbyScreen =
-    document.getElementById(
-        "lobbyScreen"
-    );
-
-const gameScreen =
-    document.getElementById(
-        "gameScreen"
-    );
-
-
-const nameInput =
-    document.getElementById(
-        "nameInput"
-    );
-
-const roomCodeInput =
-    document.getElementById(
-        "roomCodeInput"
-    );
-
-
-const createButton =
-    document.getElementById(
-        "createButton"
-    );
-
-const joinButton =
-    document.getElementById(
-        "joinButton"
-    );
-
-const startButton =
-    document.getElementById(
-        "startButton"
-    );
-
-
-const errorText =
-    document.getElementById(
-        "errorText"
-    );
-
-
-const roomCodeDisplay =
-    document.getElementById(
-        "roomCodeDisplay"
-    );
-
-const playerList =
-    document.getElementById(
-        "playerList"
-    );
-
-
-const connectionStatus =
-    document.getElementById(
-        "connectionStatus"
-    );
-
-
-const canvas =
-    document.getElementById(
-        "gameCanvas"
-    );
-
-const ctx =
-    canvas.getContext(
-        "2d"
-    );
-
-
-/* =====================================================
-   GAME STATE
-===================================================== */
+/* =========================================================
+   STATE
+========================================================= */
 
 let myId =
+    null;
+
+let roomCode =
     null;
 
 let isHost =
     false;
 
-let currentRoom =
+let gameState =
     null;
 
-let keys = {
+
+const keys = {
 
     up:
         false,
@@ -1327,99 +900,112 @@ let keys = {
 };
 
 
-let remoteEntities =
-    new Map();
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const lobby =
+    document.getElementById(
+        "lobby"
+    );
+
+const game =
+    document.getElementById(
+        "game"
+    );
+
+const roomInfo =
+    document.getElementById(
+        "roomInfo"
+    );
+
+const roomCodeDisplay =
+    document.getElementById(
+        "roomCodeDisplay"
+    );
+
+const playerCount =
+    document.getElementById(
+        "playerCount"
+    );
+
+const startButton =
+    document.getElementById(
+        "startButton"
+    );
+
+const message =
+    document.getElementById(
+        "message"
+    );
 
 
-/* =====================================================
-   CONNECTION
-===================================================== */
+/* =========================================================
+   MESSAGE
+========================================================= */
 
-socket.on(
-    "connect",
-    () => {
+function showMessage(
+    text
+) {
 
-        connectionStatus.textContent =
-            "Connected";
+    message.textContent =
+        text;
 
-        connectionStatus.className =
-            "connected";
-
-    }
-);
+    message.style.display =
+        "block";
 
 
-socket.on(
-    "disconnect",
-    () => {
-
-        connectionStatus.textContent =
-            "Disconnected";
-
-        connectionStatus.className =
-            "disconnected";
-
-    }
-);
+    clearTimeout(
+        showMessage.timeout
+    );
 
 
-socket.on(
-    "connect_error",
-    () => {
-
-        errorText.textContent =
-            "Unable to connect to Octane server.";
-
-    }
-);
-
-
-socket.on(
-    "errorMessage",
-    message => {
-
-        errorText.textContent =
-            message;
-
+    showMessage.timeout =
         setTimeout(
             () => {
 
-                errorText.textContent =
-                    "";
+                message.style.display =
+                    "none";
 
             },
-            4000
+
+            3000
         );
 
-    }
-);
+}
 
 
-/* =====================================================
+/* =========================================================
    CREATE ROOM
-===================================================== */
+========================================================= */
 
-createButton.onclick =
+document
+    .getElementById(
+        "createButton"
+    )
+    .onclick =
     () => {
 
         const name =
-            nameInput.value.trim();
+            document
+                .getElementById(
+                    "nameInput"
+                )
+                .value
+                .trim();
 
 
         if (
             !name
         ) {
 
-            errorText.textContent =
-                "Enter your name first.";
+            showMessage(
+                "Enter your name first."
+            );
 
             return;
 
         }
-
-
-        errorText.textContent =
-            "Creating station...";
 
 
         socket.emit(
@@ -1430,41 +1016,44 @@ createButton.onclick =
     };
 
 
-/* =====================================================
+/* =========================================================
    JOIN ROOM
-===================================================== */
+========================================================= */
 
-joinButton.onclick =
+document
+    .getElementById(
+        "joinButton"
+    )
+    .onclick =
     () => {
 
         const name =
-            nameInput.value.trim();
+            document
+                .getElementById(
+                    "nameInput"
+                )
+                .value
+                .trim();
+
 
         const code =
-            roomCodeInput.value
+            document
+                .getElementById(
+                    "roomInput"
+                )
+                .value
                 .trim()
                 .toUpperCase();
 
 
         if (
-            !name
+            !name ||
+            !code
         ) {
 
-            errorText.textContent =
-                "Enter your name first.";
-
-            return;
-
-        }
-
-
-        if (
-            code.length !==
-            4
-        ) {
-
-            errorText.textContent =
-                "Enter a 4-character room code.";
+            showMessage(
+                "Enter your name and station code."
+            );
 
             return;
 
@@ -1485,9 +1074,9 @@ joinButton.onclick =
     };
 
 
-/* =====================================================
+/* =========================================================
    JOINED
-===================================================== */
+========================================================= */
 
 socket.on(
     "joined",
@@ -1496,41 +1085,33 @@ socket.on(
         myId =
             data.playerId;
 
+        roomCode =
+            data.roomCode;
+
         isHost =
             data.isHost;
 
 
         roomCodeDisplay.textContent =
-            data.roomCode;
+            roomCode;
 
 
-        menuScreen.classList.add(
-            "hidden"
-        );
+        roomInfo.style.display =
+            "block";
 
 
-        lobbyScreen.classList.remove(
-            "hidden"
-        );
-
-
-        if (
+        startButton.style.display =
             isHost
-        ) {
-
-            startButton.classList.remove(
-                "hidden"
-            );
-
-        }
+                ? "inline-block"
+                : "none";
 
     }
 );
 
 
-/* =====================================================
+/* =========================================================
    START
-===================================================== */
+========================================================= */
 
 startButton.onclick =
     () => {
@@ -1542,15 +1123,31 @@ startButton.onclick =
     };
 
 
-/* =====================================================
-   STATE
-===================================================== */
+/* =========================================================
+   ERRORS
+========================================================= */
+
+socket.on(
+    "errorMessage",
+    text => {
+
+        showMessage(
+            text
+        );
+
+    }
+);
+
+
+/* =========================================================
+   GAME STATE
+========================================================= */
 
 socket.on(
     "state",
     state => {
 
-        currentRoom =
+        gameState =
             state;
 
 
@@ -1558,23 +1155,20 @@ socket.on(
             state.started
         ) {
 
-            lobbyScreen.classList.add(
-                "hidden"
-            );
+            lobby.style.display =
+                "none";
 
-            gameScreen.classList.remove(
-                "hidden"
-            );
+            game.style.display =
+                "block";
 
         }
 
 
-        updateHUD(
+        updateUI(
             state
         );
 
-
-        updateLobby(
+        renderWorld(
             state
         );
 
@@ -1582,204 +1176,524 @@ socket.on(
 );
 
 
-/* =====================================================
-   LOBBY
-===================================================== */
+/* =========================================================
+   UI
+========================================================= */
 
-function updateLobby(
+function updateUI(
     state
 ) {
 
-    if (
-        state.started
-    ) {
-
-        return;
-
-    }
-
-
-    playerList.innerHTML =
-        "";
-
-
-    for (
-        const player of
-        state.players
-    ) {
-
-        const div =
-            document.createElement(
-                "div"
-            );
-
-
-        div.className =
-            "player-entry";
-
-
-        div.textContent =
-            player.name;
-
-
-        if (
-            player.id ===
-            myId
-        ) {
-
-            div.textContent +=
-                " (You)";
-
-        }
-
-
-        if (
-            player.id ===
-            state.hostId
-        ) {
-
-            div.classList.add(
-                "host"
-            );
-
-        }
-
-
-        playerList.appendChild(
-            div
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   HUD
-===================================================== */
-
-function updateHUD(
-    state
-) {
-
-    document.getElementById(
-        "moneyValue"
-    ).textContent =
+    document
+        .getElementById(
+            "money"
+        )
+        .textContent =
         "$" +
         state.money;
 
 
-    document.getElementById(
-        "fuelValue"
-    ).textContent =
+    document
+        .getElementById(
+            "fuel"
+        )
+        .textContent =
         state.fuel +
-        "/" +
+        " / " +
         state.maxFuel;
 
 
-    document.getElementById(
-        "stockValue"
-    ).textContent =
+    document
+        .getElementById(
+            "stock"
+        )
+        .textContent =
         state.stock +
-        "/" +
+        " / " +
         state.maxStock;
 
 
-    document.getElementById(
-        "cleanValue"
-    ).textContent =
+    document
+        .getElementById(
+            "cleanliness"
+        )
+        .textContent =
         state.cleanliness +
         "%";
 
 
-    document.getElementById(
-        "dayValue"
-    ).textContent =
-        "DAY " +
-        state.day;
+    document
+        .getElementById(
+            "served"
+        )
+        .textContent =
+        state.stats.customersServed;
+
+
+    document
+        .getElementById(
+            "lost"
+        )
+        .textContent =
+        state.stats.customersLost;
+
+
+    playerCount.textContent =
+        "Players: " +
+        state.players.length +
+        " / 4";
+
+
+    const deliveryStatus =
+        document
+            .getElementById(
+                "deliveryStatus"
+            );
+
+
+    if (
+        state.delivery.ordered &&
+        !state.delivery.truckArrived
+    ) {
+
+        deliveryStatus.textContent =
+            "Truck on the way...";
+
+    }
+
+    else if (
+        state.delivery.truckArrived
+    ) {
+
+        deliveryStatus.textContent =
+            "Boxes remaining: " +
+            state.delivery.boxes;
+
+    }
+
+    else {
+
+        deliveryStatus.textContent =
+            "No delivery ordered";
+
+    }
+
+
+    const list =
+        document
+            .getElementById(
+                "playerList"
+            );
+
+
+    list.innerHTML =
+        state.players
+            .map(
+                p =>
+                    `<div>
+                        ${escapeHTML(p.name)}
+                    </div>`
+            )
+            .join("");
+
+
+    document
+        .getElementById(
+            "pumpUpgrade"
+        )
+        .disabled =
+        state.upgrades.pumps >=
+        4;
+
+
+    document
+        .getElementById(
+            "deliveryButton"
+        )
+        .disabled =
+        state.delivery.ordered;
 
 }
 
 
-/* =====================================================
-   KEYBOARD
-===================================================== */
+/* =========================================================
+   HTML ESCAPE
+========================================================= */
 
-function setKey(
-    key,
-    value
+function escapeHTML(
+    text
 ) {
 
-    if (
-        key ===
-        "w" ||
-        key ===
-        "ArrowUp"
-    ) {
-
-        keys.up =
-            value;
-
-    }
-
-
-    if (
-        key ===
-        "s" ||
-        key ===
-        "ArrowDown"
-    ) {
-
-        keys.down =
-            value;
-
-    }
-
-
-    if (
-        key ===
-        "a" ||
-        key ===
-        "ArrowLeft"
-    ) {
-
-        keys.left =
-            value;
-
-    }
-
-
-    if (
-        key ===
-        "d" ||
-        key ===
-        "ArrowRight"
-    ) {
-
-        keys.right =
-            value;
-
-    }
+    return String(
+        text
+    )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 
 }
 
 
-window.addEventListener(
-    "keydown",
-    event => {
+/* =========================================================
+   RENDER WORLD
+========================================================= */
 
-        setKey(
-            event.key,
-            true
+function renderWorld(
+    state
+) {
+
+    const world =
+        document.getElementById(
+            "world"
         );
 
 
+    /*
+    Remove old entities.
+    */
+
+    world
+        .querySelectorAll(
+            ".entity, .mess, .delivery-box"
+        )
+        .forEach(
+            element =>
+                element.remove()
+        );
+
+
+    /*
+    Players.
+    */
+
+    state.players.forEach(
+        player => {
+
+            const element =
+                document.createElement(
+                    "div"
+                );
+
+
+            element.className =
+                "entity player";
+
+
+            element.style.left =
+                player.x +
+                "px";
+
+
+            element.style.top =
+                player.y +
+                "px";
+
+
+            element.style.background =
+                player.color;
+
+
+            element.title =
+                player.name +
+                (
+                    player.carrying
+                        ? " carrying " +
+                          player.carrying
+                        : ""
+                );
+
+
+            world.appendChild(
+                element
+            );
+
+        }
+    );
+
+
+    /*
+    Bots.
+    */
+
+    state.bots.forEach(
+        bot => {
+
+            const element =
+                document.createElement(
+                    "div"
+                );
+
+
+            element.className =
+                "entity bot";
+
+
+            element.style.left =
+                bot.x +
+                "px";
+
+
+            element.style.top =
+                bot.y +
+                "px";
+
+
+            element.style.background =
+                bot.color;
+
+
+            element.title =
+                bot.name +
+                " - " +
+                bot.task;
+
+
+            world.appendChild(
+                element
+            );
+
+        }
+    );
+
+
+    /*
+    Customers.
+    */
+
+    state.customers.forEach(
+        customer => {
+
+            const element =
+                document.createElement(
+                    "div"
+                );
+
+
+            element.className =
+                "entity customer";
+
+
+            element.style.left =
+                customer.x +
+                "px";
+
+
+            element.style.top =
+                customer.y +
+                "px";
+
+
+            element.title =
+                customer.type +
+                " - " +
+                customer.state;
+
+
+            world.appendChild(
+                element
+            );
+
+        }
+    );
+
+
+    /*
+    Messes.
+    */
+
+    state.tasks
+        .filter(
+            task =>
+                task.type ===
+                "clean"
+        )
+        .forEach(
+            task => {
+
+                const element =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                element.className =
+                    "entity mess";
+
+
+                element.style.left =
+                    task.x +
+                    "px";
+
+
+                element.style.top =
+                    task.y +
+                    "px";
+
+
+                element.title =
+                    "Mess - clean this";
+
+
+                world.appendChild(
+                    element
+                );
+
+            }
+        );
+
+
+    /*
+    Delivery boxes.
+    */
+
+    if (
+        state.delivery.truckArrived
+    ) {
+
+        for (
+            let i = 0;
+
+            i <
+            state.delivery.boxes;
+
+            i++
+        ) {
+
+            const box =
+                document.createElement(
+                    "div"
+                );
+
+
+            box.className =
+                "delivery-box";
+
+
+            box.style.left =
+                (
+                    610 +
+                    (
+                        i %
+                        3
+                    ) *
+                    20
+                ) +
+                "px";
+
+
+            box.style.top =
+                (
+                    275 +
+                    Math.floor(
+                        i /
+                        3
+                    ) *
+                    20
+                ) +
+                "px";
+
+
+            world.appendChild(
+                box
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   KEYBOARD
+========================================================= */
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        const key =
+            event.key
+                .toLowerCase();
+
+
         if (
-            event.key.toLowerCase() ===
+            key ===
+            "w" ||
+            key ===
+            "arrowup"
+        ) {
+
+            keys.up =
+                true;
+
+        }
+
+
+        if (
+            key ===
+            "s" ||
+            key ===
+            "arrowdown"
+        ) {
+
+            keys.down =
+                true;
+
+        }
+
+
+        if (
+            key ===
+            "a" ||
+            key ===
+            "arrowleft"
+        ) {
+
+            keys.left =
+                true;
+
+        }
+
+
+        if (
+            key ===
+            "d" ||
+            key ===
+            "arrowright"
+        ) {
+
+            keys.right =
+                true;
+
+        }
+
+
+        if (
+            key ===
             "e"
         ) {
 
-            interact();
+            socket.emit(
+                "interact"
+            );
 
         }
 
@@ -1787,29 +1701,80 @@ window.addEventListener(
 );
 
 
-window.addEventListener(
+document.addEventListener(
     "keyup",
     event => {
 
-        setKey(
-            event.key,
-            false
-        );
+        const key =
+            event.key
+                .toLowerCase();
+
+
+        if (
+            key ===
+            "w" ||
+            key ===
+            "arrowup"
+        ) {
+
+            keys.up =
+                false;
+
+        }
+
+
+        if (
+            key ===
+            "s" ||
+            key ===
+            "arrowdown"
+        ) {
+
+            keys.down =
+                false;
+
+        }
+
+
+        if (
+            key ===
+            "a" ||
+            key ===
+            "arrowleft"
+        ) {
+
+            keys.left =
+                false;
+
+        }
+
+
+        if (
+            key ===
+            "d" ||
+            key ===
+            "arrowright"
+        ) {
+
+            keys.right =
+                false;
+
+        }
 
     }
 );
 
 
-/* =====================================================
-   INPUT SEND
-===================================================== */
+/* =========================================================
+   SEND INPUT
+========================================================= */
 
 setInterval(
     () => {
 
         if (
-            !currentRoom ||
-            !currentRoom.started
+            !gameState ||
+            !gameState.started
         ) {
 
             return;
@@ -1823,36 +1788,34 @@ setInterval(
         );
 
     },
+
     50
 );
 
 
-/* =====================================================
-   INTERACT
-===================================================== */
+/* =========================================================
+   BUTTONS
+========================================================= */
 
-function interact() {
+document
+    .getElementById(
+        "deliveryButton"
+    )
+    .onclick =
+    () => {
 
-    socket.emit(
-        "interact"
-    );
+        socket.emit(
+            "interact"
+        );
 
-}
-
-
-document.getElementById(
-    "interactButton"
-).onclick =
-    interact;
+    };
 
 
-/* =====================================================
-   HIRE BOT
-===================================================== */
-
-document.getElementById(
-    "hireButton"
-).onclick =
+document
+    .getElementById(
+        "botButton"
+    )
+    .onclick =
     () => {
 
         socket.emit(
@@ -1862,958 +1825,72 @@ document.getElementById(
     };
 
 
-/* =====================================================
-   UPGRADES
-===================================================== */
-
-const upgradePanel =
-    document.getElementById(
-        "upgradePanel"
-    );
-
-
-document.getElementById(
-    "upgradeButton"
-).onclick =
+document
+    .getElementById(
+        "pumpUpgrade"
+    )
+    .onclick =
     () => {
 
-        upgradePanel.classList.remove(
-            "hidden"
+        socket.emit(
+            "upgrade",
+            "pump"
         );
 
     };
 
 
-document.getElementById(
-    "closeUpgrade"
-).onclick =
+document
+    .getElementById(
+        "shelfUpgrade"
+    )
+    .onclick =
     () => {
 
-        upgradePanel.classList.add(
-            "hidden"
+        socket.emit(
+            "upgrade",
+            "shelves"
         );
 
     };
 
 
-document.querySelectorAll(
-    "[data-upgrade]"
-).forEach(
-    button => {
+document
+    .getElementById(
+        "employeeUpgrade"
+    )
+    .onclick =
+    () => {
 
-        button.onclick =
-            () => {
-
-                socket.emit(
-                    "upgrade",
-                    button.dataset.upgrade
-                );
-
-            };
-
-    }
-);
-
-
-/* =====================================================
-   TOUCH CONTROLS
-===================================================== */
-
-function setupTouchButton(
-    elementId,
-    direction
-) {
-
-    const element =
-        document.getElementById(
-            elementId
+        socket.emit(
+            "upgrade",
+            "employees"
         );
 
-
-    const start =
-        event => {
-
-            event.preventDefault();
-
-            keys[
-                direction
-            ] =
-                true;
-
-        };
+    };
 
 
-    const end =
-        event => {
+/* =========================================================
+   DELIVERY BUTTON HELPER
+========================================================= */
 
-            event.preventDefault();
+document
+    .getElementById(
+        "deliveryButton"
+    )
+    .addEventListener(
+        "click",
+        () => {
 
-            keys[
-                direction
-            ] =
-                false;
+            showMessage(
+                "Go to the delivery area and press E to order a delivery."
+            );
 
-        };
-
-
-    element.addEventListener(
-        "touchstart",
-        start,
-        {
-            passive:
-                false
         }
     );
-
-
-    element.addEventListener(
-        "touchend",
-        end,
-        {
-            passive:
-                false
-        }
-    );
-
-
-    element.addEventListener(
-        "touchcancel",
-        end,
-        {
-            passive:
-                false
-        }
-    );
-
-}
-
-
-setupTouchButton(
-    "touchUp",
-    "up"
-);
-
-setupTouchButton(
-    "touchDown",
-    "down"
-);
-
-setupTouchButton(
-    "touchLeft",
-    "left"
-);
-
-setupTouchButton(
-    "touchRight",
-    "right"
-);
-
-
-/* =====================================================
-   DRAW HELPERS
-===================================================== */
-
-function drawRect(
-    x,
-    y,
-    width,
-    height,
-    color
-) {
-
-    ctx.fillStyle =
-        color;
-
-    ctx.fillRect(
-        x,
-        y,
-        width,
-        height
-    );
-
-}
-
-
-function drawText(
-    text,
-    x,
-    y,
-    size = 10,
-    color = "#fff"
-) {
-
-    ctx.fillStyle =
-        color;
-
-    ctx.font =
-        size +
-        "px Arial";
-
-    ctx.textAlign =
-        "center";
-
-    ctx.fillText(
-        text,
-        x,
-        y
-    );
-
-}
-
-
-/* =====================================================
-   STATION
-===================================================== */
-
-function drawStation() {
-
-    /*
-    Ground.
-    */
-
-    drawRect(
-        0,
-        0,
-        640,
-        360,
-        "#7ca66a"
-    );
-
-
-    /*
-    Parking lot.
-    */
-
-    drawRect(
-        330,
-        40,
-        290,
-        210,
-        "#555"
-    );
-
-
-    /*
-    Parking stripes.
-    */
-
-    ctx.strokeStyle =
-        "#ddd";
-
-    ctx.lineWidth =
-        2;
-
-
-    for (
-        let i = 0;
-        i < 6;
-        i++
-    ) {
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            350 +
-            i * 45,
-            50
-        );
-
-        ctx.lineTo(
-            350 +
-            i * 45,
-            230
-        );
-
-        ctx.stroke();
-
-    }
-
-
-    /*
-    Road.
-    */
-
-    drawRect(
-        0,
-        315,
-        640,
-        45,
-        "#333"
-    );
-
-
-    ctx.strokeStyle =
-        "#ffd43b";
-
-    ctx.lineWidth =
-        2;
-
-    ctx.setLineDash(
-        [
-            12,
-            12
-        ]
-    );
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        0,
-        337
-    );
-
-    ctx.lineTo(
-        640,
-        337
-    );
-
-    ctx.stroke();
-
-    ctx.setLineDash([]);
-
-
-    /*
-    Store building.
-    */
-
-    drawRect(
-        35,
-        45,
-        270,
-        235,
-        "#ded6c7"
-    );
-
-
-    /*
-    Store roof.
-    */
-
-    drawRect(
-        30,
-        38,
-        280,
-        20,
-        "#d62828"
-    );
-
-
-    /*
-    Store sign.
-    */
-
-    drawRect(
-        100,
-        50,
-        140,
-        28,
-        "#222"
-    );
-
-
-    drawText(
-        "OCTANE",
-        170,
-        69,
-        16,
-        "#fff"
-    );
-
-
-    /*
-    Counter.
-    */
-
-    drawRect(
-        110,
-        85,
-        80,
-        35,
-        "#9c6644"
-    );
-
-
-    drawText(
-        "REGISTER",
-        150,
-        107,
-        8,
-        "#fff"
-    );
-
-
-    /*
-    Shelves.
-    */
-
-    drawRect(
-        215,
-        85,
-        65,
-        35,
-        "#795548"
-    );
-
-
-    drawText(
-        "SHOP",
-        247,
-        107,
-        9,
-        "#fff"
-    );
-
-
-    /*
-    Storage.
-    */
-
-    drawRect(
-        215,
-        245,
-        65,
-        30,
-        "#6d4c41"
-    );
-
-
-    drawText(
-        "STORAGE",
-        247,
-        264,
-        8,
-        "#fff"
-    );
-
-
-    /*
-    Restroom.
-    */
-
-    drawRect(
-        55,
-        130,
-        55,
-        55,
-        "#4dabf7"
-    );
-
-
-    drawText(
-        "WC",
-        82,
-        163,
-        14
-    );
-
-
-    /*
-    Cleaning area.
-    */
-
-    drawRect(
-        55,
-        210,
-        65,
-        45,
-        "#51cf66"
-    );
-
-
-    drawText(
-        "CLEAN",
-        87,
-        237,
-        9
-    );
-
-
-    /*
-    Delivery area.
-    */
-
-    drawRect(
-        475,
-        270,
-        85,
-        35,
-        "#f08c00"
-    );
-
-
-    drawText(
-        "DELIVERY",
-        517,
-        292,
-        8
-    );
-
-
-    /*
-    Pumps.
-    */
-
-    const pumps = [
-
-        {
-            x:
-                390,
-
-            y:
-                80
-        },
-
-        {
-            x:
-                490,
-
-            y:
-                80
-        },
-
-        {
-            x:
-                390,
-
-            y:
-                180
-        },
-
-        {
-            x:
-                490,
-
-            y:
-                180
-        }
-
-    ];
-
-
-    const pumpCount =
-        currentRoom &&
-        currentRoom.upgrades
-            ? currentRoom.upgrades.pumps
-            : 2;
-
-
-    for (
-        let i = 0;
-        i < pumpCount;
-        i++
-    ) {
-
-        const pump =
-            pumps[i];
-
-
-        drawRect(
-            pump.x -
-            12,
-
-            pump.y -
-            18,
-
-            24,
-
-            36,
-
-            "#e53935"
-        );
-
-
-        drawRect(
-            pump.x -
-            8,
-
-            pump.y -
-            12,
-
-            16,
-
-            8,
-
-            "#222"
-        );
-
-
-        drawText(
-            String(
-                i + 1
-            ),
-
-            pump.x,
-
-            pump.y +
-            5,
-
-            9
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   PLAYER
-===================================================== */
-
-function drawWorker(
-    worker,
-    isMe = false
-) {
-
-    ctx.beginPath();
-
-    ctx.arc(
-        worker.x,
-        worker.y,
-        10,
-        0,
-        Math.PI * 2
-    );
-
-
-    ctx.fillStyle =
-        worker.color ||
-        "#fff";
-
-
-    ctx.fill();
-
-
-    if (
-        isMe
-    ) {
-
-        ctx.strokeStyle =
-            "#fff";
-
-        ctx.lineWidth =
-            2;
-
-        ctx.stroke();
-
-    }
-
-
-    drawText(
-        worker.name,
-        worker.x,
-        worker.y -
-        15,
-        8,
-        "#fff"
-    );
-
-
-    if (
-        worker.carrying
-    ) {
-
-        drawText(
-            "📦",
-            worker.x,
-            worker.y +
-            20,
-            10
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   CUSTOMER
-===================================================== */
-
-function drawCustomer(
-    customer
-) {
-
-    let color =
-        "#fff";
-
-
-    if (
-        customer.type ===
-        "fuel"
-    ) {
-
-        color =
-            "#ffd43b";
-
-    }
-
-
-    if (
-        customer.type ===
-        "shop"
-    ) {
-
-        color =
-            "#74c0fc";
-
-    }
-
-
-    if (
-        customer.type ===
-        "fuelShop"
-    ) {
-
-        color =
-            "#da77f2";
-
-    }
-
-
-    if (
-        customer.type ===
-        "restroom"
-    ) {
-
-        color =
-            "#69db7c";
-
-    }
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-        customer.x,
-        customer.y,
-        7,
-        0,
-        Math.PI * 2
-    );
-
-
-    ctx.fillStyle =
-        color;
-
-    ctx.fill();
-
-
-    if (
-        customer.state ===
-        "fueling"
-    ) {
-
-        drawRect(
-            customer.x -
-            10,
-
-            customer.y -
-            15,
-
-            20,
-
-            3,
-
-            "#222"
-        );
-
-
-        drawRect(
-            customer.x -
-            10,
-
-            customer.y -
-            15,
-
-            20 *
-            (
-                customer.fuelProgress /
-                100
-            ),
-
-            3,
-
-            "#51cf66"
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   TASK
-===================================================== */
-
-function drawTask(
-    task
-) {
-
-    let color =
-        "#fff";
-
-    let symbol =
-        "?";
-
-
-    if (
-        task.type ===
-        "clean"
-    ) {
-
-        color =
-            "#51cf66";
-
-        symbol =
-            "CLEAN";
-
-    }
-
-
-    ctx.fillStyle =
-        color;
-
-    ctx.fillRect(
-        task.x -
-        8,
-
-        task.y -
-        8,
-
-        16,
-
-        16
-    );
-
-
-    drawText(
-        symbol,
-        task.x,
-        task.y +
-        25,
-        7,
-        color
-    );
-
-}
-
-
-/* =====================================================
-   DRAW
-===================================================== */
-
-function drawGame() {
-
-    ctx.clearRect(
-        0,
-        0,
-        640,
-        360
-    );
-
-
-    drawStation();
-
-
-    if (
-        !currentRoom
-    ) {
-
-        return;
-
-    }
-
-
-    /*
-    Tasks.
-    */
-
-    for (
-        const task of
-        currentRoom.tasks
-    ) {
-
-        drawTask(
-            task
-        );
-
-    }
-
-
-    /*
-    Customers.
-    */
-
-    for (
-        const customer of
-        currentRoom.customers
-    ) {
-
-        drawCustomer(
-            customer
-        );
-
-    }
-
-
-    /*
-    Bots.
-    */
-
-    for (
-        const bot of
-        currentRoom.bots
-    ) {
-
-        drawWorker(
-            bot
-        );
-
-    }
-
-
-    /*
-    Players.
-    */
-
-    for (
-        const player of
-        currentRoom.players
-    ) {
-
-        drawWorker(
-            player,
-
-            player.id ===
-            myId
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   GAME LOOP
-===================================================== */
-
-function gameLoop() {
-
-    drawGame();
-
-    requestAnimationFrame(
-        gameLoop
-    );
-
-}
-
-
-gameLoop();
 
 
 </script>
 
 </body>
-
 </html>
