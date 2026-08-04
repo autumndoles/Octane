@@ -8,115 +8,103 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-    transports: ["websocket"],
-    pingInterval: 20000,
-    pingTimeout: 5000,
-    maxHttpBufferSize: 100000
+    transports: ["polling", "websocket"],
+    pingInterval: 25000,
+    pingTimeout: 10000,
+    maxHttpBufferSize: 100000,
+    cors: {
+        origin: "*"
+    }
 });
 
 const PORT = process.env.PORT || 3000;
 
 
 /* =====================================================
-   OCTANE 2.0
-   Lightweight cooperative gas station simulator
+   OCTANE
+   Cooperative Gas Station Simulator
 ===================================================== */
-
-
-/* =====================================================
-   PERFORMANCE SETTINGS
-===================================================== */
-
-const SIMULATION_HZ = 10;
-const NETWORK_HZ = 5;
-
-const SIMULATION_MS =
-    1000 / SIMULATION_HZ;
-
-const NETWORK_MS =
-    1000 / NETWORK_HZ;
 
 
 /* =====================================================
    GAME SETTINGS
 ===================================================== */
 
-const WORLD = {
-    width: 480,
-    height: 270
-};
+const WORLD_WIDTH = 640;
+const WORLD_HEIGHT = 360;
 
 const MAX_PLAYERS = 4;
 const MAX_BOTS = 4;
 
 const STARTING_MONEY = 100;
 
-const PLAYER_SPEED = 3;
-const BOT_SPEED = 2.2;
+const PLAYER_SPEED = 3.2;
+const BOT_SPEED = 2.3;
 
-const BOT_THINK_TIME = 750;
+const SIMULATION_RATE = 10;
+const NETWORK_RATE = 10;
 
-const TASK_TIMEOUT = 5000;
+const CUSTOMER_LIMIT = 10;
 
-const MAX_CUSTOMERS = 8;
+const TASK_TIMEOUT = 8000;
 
 
 /* =====================================================
-   STATION
+   STATION LOCATIONS
 ===================================================== */
 
 const STATION = {
 
     register: {
-        x: 150,
-        y: 120
+        x: 145,
+        y: 105
     },
 
     shelves: {
-        x: 230,
-        y: 120
+        x: 255,
+        y: 105
     },
 
     storage: {
-        x: 230,
-        y: 225
-    },
-
-    cleaning: {
-        x: 105,
-        y: 220
-    },
-
-    delivery: {
-        x: 380,
-        y: 235
+        x: 255,
+        y: 280
     },
 
     restroom: {
-        x: 70,
-        y: 120
+        x: 80,
+        y: 110
+    },
+
+    cleaning: {
+        x: 100,
+        y: 255
+    },
+
+    delivery: {
+        x: 515,
+        y: 300
     },
 
     pumps: [
 
         {
-            x: 350,
-            y: 70
+            x: 390,
+            y: 80
         },
 
         {
-            x: 420,
-            y: 70
+            x: 490,
+            y: 80
         },
 
         {
-            x: 350,
-            y: 145
+            x: 390,
+            y: 180
         },
 
         {
-            x: 420,
-            y: 145
+            x: 490,
+            y: 180
         }
 
     ]
@@ -125,29 +113,24 @@ const STATION = {
 
 
 /* =====================================================
-   ROOMS
+   ROOM STORAGE
 ===================================================== */
 
 const rooms = Object.create(null);
 
-
-/* =====================================================
-   ID HELPERS
-===================================================== */
-
-let nextRoomId = 1;
+let nextRoomNumber = 1;
 
 
 /* =====================================================
-   BASIC UTILITIES
+   UTILITY
 ===================================================== */
 
-function randomCode() {
+function randomRoomCode() {
 
-    const chars =
+    const characters =
         "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-    let result = "";
+    let code = "";
 
     for (
         let i = 0;
@@ -155,166 +138,35 @@ function randomCode() {
         i++
     ) {
 
-        result +=
-            chars[
+        code +=
+            characters[
                 Math.floor(
                     Math.random() *
-                    chars.length
+                    characters.length
                 )
             ];
 
     }
 
-    return result;
+    return code;
 
 }
 
 
-function createRoom() {
-
-    let code;
-
-    do {
-
-        code =
-            randomCode();
-
-    } while (
-        rooms[code]
-    );
-
-
-    const room = {
-
-        id:
-            nextRoomId++,
-
-        code,
-
-        hostId:
-            null,
-
-        started:
-            false,
-
-        money:
-            STARTING_MONEY,
-
-        fuel:
-            50,
-
-        maxFuel:
-            100,
-
-        stock:
-            20,
-
-        maxStock:
-            40,
-
-        deliveryBoxes:
-            5,
-
-        cleanliness:
-            100,
-
-        day:
-            1,
-
-        time:
-            8 * 60,
-
-
-        players:
-            Object.create(null),
-
-        bots:
-            Object.create(null),
-
-        customers:
-            Object.create(null),
-
-        tasks:
-            Object.create(null),
-
-
-        nextBotId:
-            1,
-
-        nextCustomerId:
-            1,
-
-        nextTaskId:
-            1,
-
-
-        upgrades: {
-
-            pumps:
-                2,
-
-            employeeSlots:
-                1,
-
-            shelfCapacity:
-                1
-
-        }
-
-    };
-
-
-    rooms[code] =
-        room;
-
-
-    return room;
-
-}
-
-
-function getRoomBySocket(
-    socketId
-) {
-
-    for (
-        const room of
-        Object.values(rooms)
-    ) {
-
-        if (
-            room.players[
-                socketId
-            ]
-        ) {
-
-            return room;
-
-        }
-
-    }
-
-    return null;
-
-}
-
-
-function cleanName(
-    name
-) {
+function sanitizeName(name) {
 
     return String(
         name || "Player"
     )
-    .replace(
-        /[<>]/g,
-        ""
-    )
-    .trim()
-    .slice(
-        0,
-        20
-    ) || "Player";
+        .replace(
+            /[<>]/g,
+            ""
+        )
+        .trim()
+        .slice(
+            0,
+            20
+        ) || "Player";
 
 }
 
@@ -371,7 +223,7 @@ function moveTowards(
         target.y -
         worker.y;
 
-    const dist =
+    const length =
         Math.sqrt(
             dx * dx +
             dy * dy
@@ -379,7 +231,7 @@ function moveTowards(
 
 
     if (
-        dist <= speed
+        length <= speed
     ) {
 
         worker.x =
@@ -395,12 +247,12 @@ function moveTowards(
 
     worker.x +=
         dx /
-        dist *
+        length *
         speed;
 
     worker.y +=
         dy /
-        dist *
+        length *
         speed;
 
 
@@ -410,22 +262,147 @@ function moveTowards(
 
 
 /* =====================================================
-   WORKER SYSTEM
+   CREATE ROOM
 ===================================================== */
 
-/*
-Every worker has:
+function createRoom() {
 
-position
-task
-carrying
-last movement
-task start time
+    let code;
 
-Players and bots use the same
-underlying task system.
-*/
+    do {
 
+        code =
+            randomRoomCode();
+
+    } while (
+        rooms[code]
+    );
+
+
+    const room = {
+
+        id:
+            nextRoomNumber++,
+
+        code,
+
+        hostId:
+            null,
+
+        started:
+            false,
+
+
+        money:
+            STARTING_MONEY,
+
+        fuel:
+            50,
+
+        maxFuel:
+            100,
+
+        stock:
+            20,
+
+        maxStock:
+            50,
+
+        deliveryBoxes:
+            5,
+
+        cleanliness:
+            100,
+
+
+        day:
+            1,
+
+        time:
+            8 * 60,
+
+
+        players:
+            Object.create(null),
+
+        bots:
+            Object.create(null),
+
+        customers:
+            Object.create(null),
+
+        tasks:
+            Object.create(null),
+
+
+        nextBotId:
+            1,
+
+        nextCustomerId:
+            1,
+
+        nextTaskId:
+            1,
+
+
+        upgrades: {
+
+            pumps:
+                2,
+
+            employees:
+                1,
+
+            shelves:
+                1
+
+        }
+
+    };
+
+
+    rooms[code] =
+        room;
+
+
+    return room;
+
+}
+
+
+/* =====================================================
+   FIND ROOM
+===================================================== */
+
+function findRoomByPlayer(
+    socketId
+) {
+
+    for (
+        const room of
+        Object.values(rooms)
+    ) {
+
+        if (
+            room.players[
+                socketId
+            ]
+        ) {
+
+            return room;
+
+        }
+
+    }
+
+    return null;
+
+}
+
+
+/* =====================================================
+   CREATE WORKER
+===================================================== */
 
 function createWorker(
     id,
@@ -450,23 +427,6 @@ function createWorker(
 
         color,
 
-        carrying:
-            null,
-
-        task:
-            null,
-
-        lastX:
-            x,
-
-        lastY:
-            y,
-
-        lastMovedAt:
-            Date.now(),
-
-        lastThinkAt:
-            0,
 
         input: {
 
@@ -482,7 +442,27 @@ function createWorker(
             right:
                 false
 
-        }
+        },
+
+
+        task:
+            null,
+
+        carrying:
+            null,
+
+
+        lastThink:
+            0,
+
+        lastMoved:
+            Date.now(),
+
+        lastX:
+            x,
+
+        lastY:
+            y
 
     };
 
@@ -490,149 +470,15 @@ function createWorker(
 
 
 /* =====================================================
-   PLAYER MOVEMENT
-===================================================== */
-
-function updatePlayerMovement(
-    player
-) {
-
-    let dx = 0;
-    let dy = 0;
-
-
-    if (
-        player.input.up
-    ) {
-
-        dy--;
-
-    }
-
-    if (
-        player.input.down
-    ) {
-
-        dy++;
-
-    }
-
-    if (
-        player.input.left
-    ) {
-
-        dx--;
-
-    }
-
-    if (
-        player.input.right
-    ) {
-
-        dx++;
-
-    }
-
-
-    if (
-        dx === 0 &&
-        dy === 0
-    ) {
-
-        return;
-
-    }
-
-
-    const length =
-        Math.sqrt(
-            dx * dx +
-            dy * dy
-        );
-
-
-    player.x +=
-        dx /
-        length *
-        PLAYER_SPEED;
-
-    player.y +=
-        dy /
-        length *
-        PLAYER_SPEED;
-
-
-    player.x =
-        clamp(
-            player.x,
-            10,
-            WORLD.width -
-            10
-        );
-
-
-    player.y =
-        clamp(
-            player.y,
-            10,
-            WORLD.height -
-            10
-        );
-
-
-    updateWorkerMovement(
-        player
-    );
-
-}
-
-
-/* =====================================================
-   MOVEMENT TRACKING
-===================================================== */
-
-function updateWorkerMovement(
-    worker
-) {
-
-    const moved =
-        Math.abs(
-            worker.x -
-            worker.lastX
-        ) > 0.1 ||
-        Math.abs(
-            worker.y -
-            worker.lastY
-        ) > 0.1;
-
-
-    if (
-        moved
-    ) {
-
-        worker.lastX =
-            worker.x;
-
-        worker.lastY =
-            worker.y;
-
-        worker.lastMovedAt =
-            Date.now();
-
-    }
-
-}
-
-
-/* =====================================================
-   TASK CREATION
+   TASK SYSTEM
 ===================================================== */
 
 function createTask(
     room,
     type,
-    target,
-    priority
+    x,
+    y,
+    priority = 1
 ) {
 
     const id =
@@ -646,11 +492,9 @@ function createTask(
 
         type,
 
-        x:
-            target.x,
+        x,
 
-        y:
-            target.y,
+        y,
 
         priority,
 
@@ -668,603 +512,7 @@ function createTask(
 }
 
 
-/* =====================================================
-   TASK RELEASE
-===================================================== */
-
-function releaseTask(
-    room,
-    task
-) {
-
-    if (
-        !task
-    ) {
-
-        return;
-
-    }
-
-
-    task.claimedBy =
-        null;
-
-    task.claimedAt =
-        0;
-
-}
-
-
-/* =====================================================
-   RELEASE WORKER
-===================================================== */
-
-function releaseWorkerTask(
-    room,
-    worker
-) {
-
-    if (
-        !worker.task
-    ) {
-
-        return;
-
-    }
-
-
-    const task =
-        worker.task;
-
-
-    if (
-        task.type ===
-        "fuel" ||
-        task.type ===
-        "cashier"
-    ) {
-
-        const customer =
-            room.customers[
-                task.customerId
-            ];
-
-
-        if (
-            customer &&
-            customer.claimedBy ===
-            worker.id
-        ) {
-
-            customer.claimedBy =
-                null;
-
-
-            if (
-                customer.state ===
-                "fueling"
-            ) {
-
-                customer.state =
-                    "waitingFuel";
-
-            }
-
-
-            if (
-                customer.state ===
-                "checkingOut"
-            ) {
-
-                customer.state =
-                    "waitingCheckout";
-
-            }
-
-        }
-
-    }
-
-
-    if (
-        task.taskId
-    ) {
-
-        const stationTask =
-            room.tasks[
-                task.taskId
-            ];
-
-
-        if (
-            stationTask &&
-            stationTask.claimedBy ===
-            worker.id
-        ) {
-
-            releaseTask(
-                room,
-                stationTask
-            );
-
-        }
-
-    }
-
-
-    worker.task =
-        null;
-
-}
-
-
-/* =====================================================
-   CUSTOMER SYSTEM
-===================================================== */
-
-const CUSTOMER_TYPES = [
-
-    "fuel",
-
-    "shop",
-
-    "fuelShop",
-
-    "restroom"
-
-];
-
-
-function createCustomer(
-    room
-) {
-
-    if (
-        Object.keys(
-            room.customers
-        ).length >=
-        MAX_CUSTOMERS
-    ) {
-
-        return;
-
-    }
-
-
-    const type =
-        CUSTOMER_TYPES[
-            Math.floor(
-                Math.random() *
-                CUSTOMER_TYPES.length
-            )
-        ];
-
-
-    const pumpIndex =
-        Math.floor(
-            Math.random() *
-            room.upgrades.pumps
-        );
-
-
-    const id =
-        "customer_" +
-        room.nextCustomerId++;
-
-
-    room.customers[id] = {
-
-        id,
-
-        type,
-
-        x:
-            455,
-
-        y:
-            255,
-
-        state:
-            "entering",
-
-        pumpIndex,
-
-        patience:
-            100,
-
-        fuelProgress:
-            0,
-
-        shopProgress:
-            0,
-
-        restroomProgress:
-            0,
-
-        claimedBy:
-            null,
-
-        targetX:
-            0,
-
-        targetY:
-            0
-
-    };
-
-}
-
-
-/* =====================================================
-   CUSTOMER UPDATE
-===================================================== */
-
-function updateCustomers(
-    room
-) {
-
-    const now =
-        Date.now();
-
-
-    for (
-        const customer of
-        Object.values(
-            room.customers
-        )
-    ) {
-
-
-        /* ---------------------------------------------
-           ENTERING
-        --------------------------------------------- */
-
-        if (
-            customer.state ===
-            "entering"
-        ) {
-
-            customer.targetX =
-                430;
-
-            customer.targetY =
-                240;
-
-
-            const arrived =
-                moveTowards(
-                    customer,
-                    customer,
-                    0
-                );
-
-
-            customer.x +=
-                (430 -
-                    customer.x) *
-                0.05;
-
-
-            customer.y +=
-                (240 -
-                    customer.y) *
-                0.05;
-
-
-            if (
-                distance(
-                    customer,
-                    {
-                        x:
-                            430,
-
-                        y:
-                            240
-                    }
-                ) <
-                5
-            ) {
-
-                if (
-                    customer.type ===
-                    "fuel" ||
-                    customer.type ===
-                    "fuelShop"
-                ) {
-
-                    customer.state =
-                        "waitingFuel";
-
-                }
-
-                else if (
-                    customer.type ===
-                    "shop"
-                ) {
-
-                    customer.state =
-                        "waitingCheckout";
-
-                }
-
-                else {
-
-                    customer.state =
-                        "waitingRestroom";
-
-                }
-
-            }
-
-        }
-
-
-        /* ---------------------------------------------
-           WAITING STATES
-        --------------------------------------------- */
-
-        else if (
-            customer.state ===
-            "waitingFuel" ||
-            customer.state ===
-            "waitingCheckout" ||
-            customer.state ===
-            "waitingRestroom"
-        ) {
-
-            customer.patience -=
-                0.05;
-
-        }
-
-
-        /* ---------------------------------------------
-           FUELING
-        --------------------------------------------- */
-
-        else if (
-            customer.state ===
-            "fueling"
-        ) {
-
-            customer.fuelProgress +=
-                2;
-
-
-            if (
-                customer.fuelProgress >=
-                100
-            ) {
-
-                room.money +=
-                    15;
-
-
-                customer.claimedBy =
-                    null;
-
-
-                if (
-                    customer.type ===
-                    "fuelShop"
-                ) {
-
-                    customer.state =
-                        "waitingCheckout";
-
-                }
-
-                else {
-
-                    customer.state =
-                        "leaving";
-
-                }
-
-            }
-
-        }
-
-
-        /* ---------------------------------------------
-           SHOPPING
-        --------------------------------------------- */
-
-        else if (
-            customer.state ===
-            "shopping"
-        ) {
-
-            customer.shopProgress +=
-                3;
-
-
-            if (
-                customer.shopProgress >=
-                100
-            ) {
-
-                room.money +=
-                    10;
-
-
-                room.stock =
-                    Math.max(
-                        0,
-                        room.stock -
-                        1
-                    );
-
-
-                customer.claimedBy =
-                    null;
-
-                customer.state =
-                    "leaving";
-
-            }
-
-        }
-
-
-        /* ---------------------------------------------
-           RESTROOM
-        --------------------------------------------- */
-
-        else if (
-            customer.state ===
-            "usingRestroom"
-        ) {
-
-            customer.restroomProgress +=
-                3;
-
-
-            if (
-                customer.restroomProgress >=
-                100
-            ) {
-
-                customer.claimedBy =
-                    null;
-
-
-                createCleaningTask(
-                    room,
-                    100,
-                    120
-                );
-
-
-                customer.state =
-                    "leaving";
-
-            }
-
-        }
-
-
-        /* ---------------------------------------------
-           LEAVING
-        --------------------------------------------- */
-
-        else if (
-            customer.state ===
-            "leaving"
-        ) {
-
-            customer.x +=
-                1.5;
-
-
-            if (
-                customer.x >
-                WORLD.width +
-                20
-            ) {
-
-                delete room.customers[
-                    customer.id
-                ];
-
-            }
-
-        }
-
-
-        /* ---------------------------------------------
-           PATIENCE
-        --------------------------------------------- */
-
-        if (
-            customer.patience <=
-            0
-        ) {
-
-            customer.claimedBy =
-                null;
-
-            customer.state =
-                "leaving";
-
-        }
-
-    }
-
-
-    /*
-    Spawn customers occasionally.
-    */
-
-    if (
-        Math.random() <
-        0.035
-    ) {
-
-        createCustomer(
-            room
-        );
-
-    }
-
-}
-
-
-/* =====================================================
-   CLEANING TASKS
-===================================================== */
-
-function createCleaningTask(
-    room,
-    x,
-    y
-) {
-
-    for (
-        const task of
-        Object.values(
-            room.tasks
-        )
-    ) {
-
-        if (
-            task.type ===
-            "clean" &&
-            distance(
-                task,
-                {
-                    x,
-                    y
-                }
-            ) <
-            20
-        ) {
-
-            return;
-
-        }
-
-    }
-
-
-    createTask(
-        room,
-        "clean",
-        {
-            x,
-            y
-        },
-        2
-    );
-
-}
-
-
-/* =====================================================
-   FIND TASKS
-===================================================== */
-
-function findAvailableTask(
+function findTask(
     room,
     type
 ) {
@@ -1319,16 +567,917 @@ function findAvailableTask(
 
 
 /* =====================================================
+   RELEASE TASK
+===================================================== */
+
+function releaseWorkerTask(
+    room,
+    worker
+) {
+
+    if (
+        !worker.task
+    ) {
+
+        return;
+
+    }
+
+
+    const task =
+        worker.task;
+
+
+    if (
+        task.taskId
+    ) {
+
+        const stationTask =
+            room.tasks[
+                task.taskId
+            ];
+
+
+        if (
+            stationTask &&
+            stationTask.claimedBy ===
+            worker.id
+        ) {
+
+            stationTask.claimedBy =
+                null;
+
+            stationTask.claimedAt =
+                0;
+
+        }
+
+    }
+
+
+    if (
+        task.customerId
+    ) {
+
+        const customer =
+            room.customers[
+                task.customerId
+            ];
+
+
+        if (
+            customer &&
+            customer.claimedBy ===
+            worker.id
+        ) {
+
+            customer.claimedBy =
+                null;
+
+
+            if (
+                customer.state ===
+                "fueling"
+            ) {
+
+                customer.state =
+                    "waitingFuel";
+
+            }
+
+
+            if (
+                customer.state ===
+                "shopping"
+            ) {
+
+                customer.state =
+                    "waitingCheckout";
+
+            }
+
+        }
+
+    }
+
+
+    worker.task =
+        null;
+
+}
+
+
+/* =====================================================
+   CUSTOMER SYSTEM
+===================================================== */
+
+const CUSTOMER_TYPES = [
+
+    "fuel",
+
+    "shop",
+
+    "fuelShop",
+
+    "restroom"
+
+];
+
+
+function createCustomer(
+    room
+) {
+
+    if (
+        Object.keys(
+            room.customers
+        ).length >=
+        CUSTOMER_LIMIT
+    ) {
+
+        return;
+
+    }
+
+
+    const type =
+        CUSTOMER_TYPES[
+            Math.floor(
+                Math.random() *
+                CUSTOMER_TYPES.length
+            )
+        ];
+
+
+    const pumpIndex =
+        Math.floor(
+            Math.random() *
+            room.upgrades.pumps
+        );
+
+
+    const id =
+        "customer_" +
+        room.nextCustomerId++;
+
+
+    room.customers[id] = {
+
+        id,
+
+        type,
+
+
+        x:
+            625,
+
+        y:
+            330,
+
+
+        state:
+            "entering",
+
+
+        pumpIndex,
+
+
+        fuelProgress:
+            0,
+
+        shopProgress:
+            0,
+
+        restroomProgress:
+            0,
+
+
+        patience:
+            100,
+
+
+        claimedBy:
+            null
+
+    };
+
+}
+
+
+/* =====================================================
+   CUSTOMER UPDATE
+===================================================== */
+
+function updateCustomers(
+    room
+) {
+
+    for (
+        const customer of
+        Object.values(
+            room.customers
+        )
+    ) {
+
+        if (
+            customer.state ===
+            "entering"
+        ) {
+
+            customer.x -=
+                1.5;
+
+
+            if (
+                customer.x <=
+                560
+            ) {
+
+                if (
+                    customer.type ===
+                    "fuel" ||
+                    customer.type ===
+                    "fuelShop"
+                ) {
+
+                    customer.state =
+                        "waitingFuel";
+
+                }
+
+                else if (
+                    customer.type ===
+                    "shop"
+                ) {
+
+                    customer.state =
+                        "waitingCheckout";
+
+                }
+
+                else {
+
+                    customer.state =
+                        "waitingRestroom";
+
+                }
+
+            }
+
+        }
+
+
+        else if (
+            customer.state ===
+            "waitingFuel"
+        ) {
+
+            customer.patience -=
+                0.03;
+
+        }
+
+
+        else if (
+            customer.state ===
+            "fueling"
+        ) {
+
+            customer.fuelProgress +=
+                2;
+
+
+            if (
+                customer.fuelProgress >=
+                100
+            ) {
+
+                room.money +=
+                    15;
+
+
+                customer.claimedBy =
+                    null;
+
+
+                if (
+                    customer.type ===
+                    "fuelShop"
+                ) {
+
+                    customer.state =
+                        "waitingCheckout";
+
+                }
+
+                else {
+
+                    customer.state =
+                        "leaving";
+
+                }
+
+            }
+
+        }
+
+
+        else if (
+            customer.state ===
+            "waitingCheckout"
+        ) {
+
+            customer.patience -=
+                0.03;
+
+        }
+
+
+        else if (
+            customer.state ===
+            "shopping"
+        ) {
+
+            customer.shopProgress +=
+                3;
+
+
+            if (
+                customer.shopProgress >=
+                100
+            ) {
+
+                if (
+                    room.stock >
+                    0
+                ) {
+
+                    room.stock--;
+
+                    room.money +=
+                        10;
+
+                }
+
+
+                customer.claimedBy =
+                    null;
+
+                customer.state =
+                    "leaving";
+
+            }
+
+        }
+
+
+        else if (
+            customer.state ===
+            "waitingRestroom"
+        ) {
+
+            customer.patience -=
+                0.03;
+
+
+            if (
+                Math.random() <
+                0.01
+            ) {
+
+                customer.state =
+                    "usingRestroom";
+
+            }
+
+        }
+
+
+        else if (
+            customer.state ===
+            "usingRestroom"
+        ) {
+
+            customer.restroomProgress +=
+                3;
+
+
+            if (
+                customer.restroomProgress >=
+                100
+            ) {
+
+                createTask(
+                    room,
+                    "clean",
+                    80,
+                    110,
+                    2
+                );
+
+
+                customer.state =
+                    "leaving";
+
+            }
+
+        }
+
+
+        else if (
+            customer.state ===
+            "leaving"
+        ) {
+
+            customer.x +=
+                2;
+
+
+            if (
+                customer.x >
+                660
+            ) {
+
+                delete room.customers[
+                    customer.id
+                ];
+
+            }
+
+        }
+
+
+        if (
+            customer.patience <=
+            0
+        ) {
+
+            customer.claimedBy =
+                null;
+
+            customer.state =
+                "leaving";
+
+        }
+
+    }
+
+
+    /*
+    Customer spawn rate.
+    */
+
+    if (
+        Math.random() <
+        0.025
+    ) {
+
+        createCustomer(
+            room
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   PLAYER MOVEMENT
+===================================================== */
+
+function updatePlayer(
+    player
+) {
+
+    let dx = 0;
+    let dy = 0;
+
+
+    if (
+        player.input.up
+    ) {
+
+        dy--;
+
+    }
+
+    if (
+        player.input.down
+    ) {
+
+        dy++;
+
+    }
+
+    if (
+        player.input.left
+    ) {
+
+        dx--;
+
+    }
+
+    if (
+        player.input.right
+    ) {
+
+        dx++;
+
+    }
+
+
+    if (
+        dx !== 0 ||
+        dy !== 0
+    ) {
+
+        const length =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+
+        player.x +=
+            dx /
+            length *
+            PLAYER_SPEED;
+
+        player.y +=
+            dy /
+            length *
+            PLAYER_SPEED;
+
+
+        player.x =
+            clamp(
+                player.x,
+                10,
+                WORLD_WIDTH -
+                10
+            );
+
+
+        player.y =
+            clamp(
+                player.y,
+                10,
+                WORLD_HEIGHT -
+                10
+            );
+
+
+        player.lastMoved =
+            Date.now();
+
+    }
+
+
+    updateWorkerTask(
+        roomForWorker(player),
+        player
+    );
+
+}
+
+
+function roomForWorker(
+    worker
+) {
+
+    for (
+        const room of
+        Object.values(rooms)
+    ) {
+
+        if (
+            room.players[
+                worker.id
+            ] ||
+            room.bots[
+                worker.id
+            ]
+        ) {
+
+            return room;
+
+        }
+
+    }
+
+    return null;
+
+}
+
+
+/* =====================================================
+   WORKER TASKS
+===================================================== */
+
+function updateWorkerTask(
+    room,
+    worker
+) {
+
+    if (
+        !room ||
+        !worker.task
+    ) {
+
+        return;
+
+    }
+
+
+    const task =
+        worker.task;
+
+
+    if (
+        task.type ===
+        "fuel"
+    ) {
+
+        const customer =
+            room.customers[
+                task.customerId
+            ];
+
+
+        if (
+            !customer
+        ) {
+
+            worker.task =
+                null;
+
+            return;
+
+        }
+
+
+        if (
+            room.fuel <=
+            0
+        ) {
+
+            releaseWorkerTask(
+                room,
+                worker
+            );
+
+            return;
+
+        }
+
+
+        room.fuel -=
+            0.12;
+
+
+        customer.fuelProgress +=
+            2;
+
+
+        if (
+            customer.fuelProgress >=
+            100
+        ) {
+
+            room.money +=
+                15;
+
+
+            if (
+                customer.type ===
+                "fuelShop"
+            ) {
+
+                customer.state =
+                    "waitingCheckout";
+
+            }
+
+            else {
+
+                customer.state =
+                    "leaving";
+
+            }
+
+
+            customer.claimedBy =
+                null;
+
+
+            worker.task =
+                null;
+
+        }
+
+    }
+
+
+    else if (
+        task.type ===
+        "cashier"
+    ) {
+
+        const customer =
+            room.customers[
+                task.customerId
+            ];
+
+
+        if (
+            !customer
+        ) {
+
+            worker.task =
+                null;
+
+            return;
+
+        }
+
+
+        customer.shopProgress +=
+            4;
+
+
+        if (
+            customer.shopProgress >=
+            100
+        ) {
+
+            if (
+                room.stock >
+                0
+            ) {
+
+                room.stock--;
+
+                room.money +=
+                    10;
+
+            }
+
+
+            customer.claimedBy =
+                null;
+
+            customer.state =
+                "leaving";
+
+
+            worker.task =
+                null;
+
+        }
+
+    }
+
+
+    else if (
+        task.type ===
+        "clean"
+    ) {
+
+        const stationTask =
+            room.tasks[
+                task.taskId
+            ];
+
+
+        if (
+            !stationTask
+        ) {
+
+            worker.task =
+                null;
+
+            return;
+
+        }
+
+
+        task.progress +=
+            5;
+
+
+        if (
+            task.progress >=
+            100
+        ) {
+
+            room.cleanliness =
+                Math.min(
+                    100,
+                    room.cleanliness +
+                    15
+                );
+
+
+            delete room.tasks[
+                task.taskId
+            ];
+
+
+            worker.task =
+                null;
+
+        }
+
+    }
+
+
+    else if (
+        task.type ===
+        "restock"
+    ) {
+
+        task.progress +=
+            4;
+
+
+        if (
+            task.progress >=
+            100
+        ) {
+
+            room.stock =
+                Math.min(
+                    room.maxStock,
+                    room.stock +
+                    10
+                );
+
+
+            worker.carrying =
+                null;
+
+
+            worker.task =
+                null;
+
+        }
+
+    }
+
+
+    else if (
+        task.type ===
+        "delivery"
+    ) {
+
+        task.progress +=
+            3;
+
+
+        if (
+            task.progress >=
+            100
+        ) {
+
+            room.fuel =
+                Math.min(
+                    room.maxFuel,
+                    room.fuel +
+                    40
+                );
+
+
+            worker.task =
+                null;
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
    PLAYER INTERACTION
 ===================================================== */
 
-function playerInteract(
+function interact(
     room,
     player
 ) {
 
+    if (
+        !room ||
+        !room.started
+    ) {
+
+        return;
+
+    }
+
+
     /*
-    Cancel current task.
+    Cancel current action.
     */
 
     if (
@@ -1365,7 +1514,7 @@ function playerInteract(
                 player,
                 pump
             ) <
-            30
+            35
         ) {
 
             const customer =
@@ -1415,7 +1564,7 @@ function playerInteract(
 
 
     /*
-    Register.
+    Checkout.
     */
 
     if (
@@ -1468,7 +1617,7 @@ function playerInteract(
 
 
     /*
-    Restock.
+    Storage pickup.
     */
 
     if (
@@ -1491,6 +1640,10 @@ function playerInteract(
 
     }
 
+
+    /*
+    Restock shelves.
+    */
 
     if (
         distance(
@@ -1523,7 +1676,7 @@ function playerInteract(
     */
 
     const cleanTask =
-        findAvailableTask(
+        findTask(
             room,
             "clean"
         );
@@ -1573,7 +1726,7 @@ function playerInteract(
             player,
             STATION.delivery
         ) <
-        35 &&
+        40 &&
         room.fuel <
         room.maxFuel
     ) {
@@ -1587,323 +1740,6 @@ function playerInteract(
                 0
 
         };
-
-    }
-
-}
-
-
-/* =====================================================
-   WORKER TASK UPDATE
-===================================================== */
-
-function updateWorkerTask(
-    room,
-    worker
-) {
-
-    if (
-        !worker.task
-    ) {
-
-        return;
-
-    }
-
-
-    const task =
-        worker.task;
-
-
-    /* ---------------------------------------------
-       FUEL
-    --------------------------------------------- */
-
-    if (
-        task.type ===
-        "fuel"
-    ) {
-
-        const customer =
-            room.customers[
-                task.customerId
-            ];
-
-
-        if (
-            !customer
-        ) {
-
-            worker.task =
-                null;
-
-            return;
-
-        }
-
-
-        if (
-            room.fuel <=
-            0
-        ) {
-
-            releaseWorkerTask(
-                room,
-                worker
-            );
-
-            return;
-
-        }
-
-
-        room.fuel -=
-            0.15;
-
-
-        customer.fuelProgress +=
-            2;
-
-
-        if (
-            customer.fuelProgress >=
-            100
-        ) {
-
-            room.money +=
-                15;
-
-
-            customer.claimedBy =
-                null;
-
-
-            if (
-                customer.type ===
-                "fuelShop"
-            ) {
-
-                customer.state =
-                    "waitingCheckout";
-
-            }
-
-            else {
-
-                customer.state =
-                    "leaving";
-
-            }
-
-
-            worker.task =
-                null;
-
-        }
-
-
-        return;
-
-    }
-
-
-    /* ---------------------------------------------
-       CASHIER
-    --------------------------------------------- */
-
-    if (
-        task.type ===
-        "cashier"
-    ) {
-
-        const customer =
-            room.customers[
-                task.customerId
-            ];
-
-
-        if (
-            !customer
-        ) {
-
-            worker.task =
-                null;
-
-            return;
-
-        }
-
-
-        customer.shopProgress +=
-            4;
-
-
-        if (
-            customer.shopProgress >=
-            100
-        ) {
-
-            room.money +=
-                10;
-
-
-            room.stock =
-                Math.max(
-                    0,
-                    room.stock -
-                    1
-                );
-
-
-            customer.claimedBy =
-                null;
-
-            customer.state =
-                "leaving";
-
-
-            worker.task =
-                null;
-
-        }
-
-
-        return;
-
-    }
-
-
-    /* ---------------------------------------------
-       RESTOCK
-    --------------------------------------------- */
-
-    if (
-        task.type ===
-        "restock"
-    ) {
-
-        task.progress +=
-            4;
-
-
-        if (
-            task.progress >=
-            100
-        ) {
-
-            room.stock =
-                Math.min(
-                    room.maxStock,
-                    room.stock +
-                    10
-                );
-
-
-            worker.carrying =
-                null;
-
-
-            worker.task =
-                null;
-
-        }
-
-
-        return;
-
-    }
-
-
-    /* ---------------------------------------------
-       CLEAN
-    --------------------------------------------- */
-
-    if (
-        task.type ===
-        "clean"
-    ) {
-
-        const stationTask =
-            room.tasks[
-                task.taskId
-            ];
-
-
-        if (
-            !stationTask
-        ) {
-
-            worker.task =
-                null;
-
-            return;
-
-        }
-
-
-        task.progress +=
-            5;
-
-
-        if (
-            task.progress >=
-            100
-        ) {
-
-            room.cleanliness =
-                Math.min(
-                    100,
-                    room.cleanliness +
-                    20
-                );
-
-
-            delete room.tasks[
-                task.taskId
-            ];
-
-
-            worker.task =
-                null;
-
-        }
-
-
-        return;
-
-    }
-
-
-    /* ---------------------------------------------
-       DELIVERY
-    --------------------------------------------- */
-
-    if (
-        task.type ===
-        "delivery"
-    ) {
-
-        task.progress +=
-            3;
-
-
-        if (
-            task.progress >=
-            100
-        ) {
-
-            room.fuel =
-                Math.min(
-                    room.maxFuel,
-                    room.fuel +
-                    40
-                );
-
-
-            worker.task =
-                null;
-
-        }
 
     }
 
@@ -1925,8 +1761,8 @@ function botThink(
 
     if (
         now -
-        bot.lastThinkAt <
-        BOT_THINK_TIME
+        bot.lastThink <
+        800
     ) {
 
         return;
@@ -1934,7 +1770,7 @@ function botThink(
     }
 
 
-    bot.lastThinkAt =
+    bot.lastThink =
         now;
 
 
@@ -1948,7 +1784,7 @@ function botThink(
 
 
     /*
-    Fuel customers first.
+    Fuel customers.
     */
 
     const fuelCustomer =
@@ -1959,18 +1795,22 @@ function botThink(
                 c.state ===
                 "waitingFuel" &&
 
-                !c.claimedBy
+                !c.claimedBy &&
+
+                room.fuel >
+                0
         );
 
 
     if (
-        fuelCustomer &&
-        room.fuel >
-        0
+        fuelCustomer
     ) {
 
         fuelCustomer.claimedBy =
             bot.id;
+
+        fuelCustomer.state =
+            "fueling";
 
 
         bot.task = {
@@ -2037,8 +1877,8 @@ function botThink(
     */
 
     if (
-        room.stock <=
-        8 &&
+        room.stock <
+        10 &&
         room.deliveryBoxes >
         0
     ) {
@@ -2046,7 +1886,7 @@ function botThink(
         bot.task = {
 
             type:
-                "restockPickup"
+                "pickup"
 
         };
 
@@ -2061,7 +1901,7 @@ function botThink(
     */
 
     const cleanTask =
-        findAvailableTask(
+        findTask(
             room,
             "clean"
         );
@@ -2134,18 +1974,10 @@ function updateBot(
         Date.now();
 
 
-    /*
-    Stuck detection.
-
-    If the bot has a task but
-    hasn't moved for 5 seconds,
-    release the task.
-    */
-
     if (
         bot.task &&
         now -
-        bot.lastMovedAt >
+        bot.lastMoved >
         TASK_TIMEOUT
     ) {
 
@@ -2175,10 +2007,6 @@ function updateBot(
     const task =
         bot.task;
 
-
-    /* ---------------------------------------------
-       FUEL
-    --------------------------------------------- */
 
     if (
         task.type ===
@@ -2224,22 +2052,10 @@ function updateBot(
 
         }
 
-
-        updateWorkerMovement(
-            bot
-        );
-
-
-        return;
-
     }
 
 
-    /* ---------------------------------------------
-       CASHIER
-    --------------------------------------------- */
-
-    if (
+    else if (
         task.type ===
         "cashier"
     ) {
@@ -2259,24 +2075,12 @@ function updateBot(
 
         }
 
-
-        updateWorkerMovement(
-            bot
-        );
-
-
-        return;
-
     }
 
 
-    /* ---------------------------------------------
-       RESTOCK PICKUP
-    --------------------------------------------- */
-
-    if (
+    else if (
         task.type ===
-        "restockPickup"
+        "pickup"
     ) {
 
         if (
@@ -2319,22 +2123,10 @@ function updateBot(
 
         }
 
-
-        updateWorkerMovement(
-            bot
-        );
-
-
-        return;
-
     }
 
 
-    /* ---------------------------------------------
-       RESTOCK
-    --------------------------------------------- */
-
-    if (
+    else if (
         task.type ===
         "restock"
     ) {
@@ -2354,22 +2146,10 @@ function updateBot(
 
         }
 
-
-        updateWorkerMovement(
-            bot
-        );
-
-
-        return;
-
     }
 
 
-    /* ---------------------------------------------
-       CLEAN
-    --------------------------------------------- */
-
-    if (
+    else if (
         task.type ===
         "clean"
     ) {
@@ -2407,22 +2187,10 @@ function updateBot(
 
         }
 
-
-        updateWorkerMovement(
-            bot
-        );
-
-
-        return;
-
     }
 
 
-    /* ---------------------------------------------
-       DELIVERY
-    --------------------------------------------- */
-
-    if (
+    else if (
         task.type ===
         "delivery"
     ) {
@@ -2442,93 +2210,33 @@ function updateBot(
 
         }
 
-
-        updateWorkerMovement(
-            bot
-        );
-
     }
 
-}
+
+    const moved =
+        Math.abs(
+            bot.x -
+            bot.lastX
+        ) > 0.1 ||
+
+        Math.abs(
+            bot.y -
+            bot.lastY
+        ) > 0.1;
 
 
-/* =====================================================
-   BOT PRIORITY FIX
-===================================================== */
-
-/*
-If a player is actively working
-on a customer, bots don't steal it.
-
-If a player starts a cleaning task,
-the bot task is released.
-*/
-
-
-function preventBotConflicts(
-    room
-) {
-
-    for (
-        const bot of
-        Object.values(
-            room.bots
-        )
+    if (
+        moved
     ) {
 
-        if (
-            !bot.task
-        ) {
+        bot.lastX =
+            bot.x;
 
-            continue;
+        bot.lastY =
+            bot.y;
 
-        }
-
-
-        for (
-            const player of
-            Object.values(
-                room.players
-            )
-        ) {
-
-            if (
-                !player.task
-            ) {
-
-                continue;
-
-            }
-
-
-            if (
-                player.task.customerId &&
-                bot.task.customerId ===
-                player.task.customerId
-            ) {
-
-                releaseWorkerTask(
-                    room,
-                    bot
-                );
-
-            }
-
-
-            if (
-                player.task.taskId &&
-                bot.task.taskId ===
-                player.task.taskId
-            ) {
-
-                releaseWorkerTask(
-                    room,
-                    bot
-                );
-
-            }
-
-        }
+        bot.lastMoved =
+            now;
 
     }
 
@@ -2536,7 +2244,7 @@ function preventBotConflicts(
 
 
 /* =====================================================
-   GAME SIMULATION
+   GAME UPDATE
 ===================================================== */
 
 function updateRoom(
@@ -2552,10 +2260,6 @@ function updateRoom(
     }
 
 
-    /*
-    Players.
-    */
-
     for (
         const player of
         Object.values(
@@ -2563,30 +2267,17 @@ function updateRoom(
         )
     ) {
 
-        updatePlayerMovement(
-            player
-        );
-
-        updateWorkerTask(
-            room,
+        updatePlayer(
             player
         );
 
     }
 
 
-    /*
-    Customers.
-    */
-
     updateCustomers(
         room
     );
 
-
-    /*
-    Bots.
-    */
 
     for (
         const bot of
@@ -2604,19 +2295,7 @@ function updateRoom(
 
 
     /*
-    Prevent bots from
-    interfering with players.
-    */
-
-    preventBotConflicts(
-        room
-    );
-
-
-    /*
-    Clock.
-
-    Very lightweight simulation.
+    Game clock.
     */
 
     room.time +=
@@ -2637,20 +2316,19 @@ function updateRoom(
 
 
     /*
-    Cleanliness.
+    Cleanliness slowly decreases.
     */
 
     room.cleanliness =
         Math.max(
             0,
             room.cleanliness -
-            0.002
+            0.003
         );
 
 
     /*
-    Automatic cleanup
-    of abandoned task claims.
+    Release abandoned tasks.
     */
 
     const now =
@@ -2671,10 +2349,11 @@ function updateRoom(
             TASK_TIMEOUT
         ) {
 
-            releaseTask(
-                room,
-                task
-            );
+            task.claimedBy =
+                null;
+
+            task.claimedAt =
+                0;
 
         }
 
@@ -2684,7 +2363,7 @@ function updateRoom(
 
 
 /* =====================================================
-   NETWORK STATE
+   BUILD NETWORK STATE
 ===================================================== */
 
 function buildState(
@@ -2692,6 +2371,9 @@ function buildState(
 ) {
 
     return {
+
+        started:
+            room.started,
 
         money:
             Math.floor(
@@ -2733,33 +2415,33 @@ function buildState(
             Object.values(
                 room.players
             ).map(
-                p => ({
+                player => ({
 
                     id:
-                        p.id,
+                        player.id,
 
                     name:
-                        p.name,
+                        player.name,
 
                     x:
                         Math.round(
-                            p.x
+                            player.x
                         ),
 
                     y:
                         Math.round(
-                            p.y
+                            player.y
                         ),
 
                     color:
-                        p.color,
+                        player.color,
 
                     carrying:
-                        p.carrying,
+                        player.carrying,
 
                     task:
-                        p.task
-                            ? p.task.type
+                        player.task
+                            ? player.task.type
                             : null
 
                 })
@@ -2770,30 +2452,30 @@ function buildState(
             Object.values(
                 room.bots
             ).map(
-                b => ({
+                bot => ({
 
                     id:
-                        b.id,
+                        bot.id,
 
                     name:
-                        b.name,
+                        bot.name,
 
                     x:
                         Math.round(
-                            b.x
+                            bot.x
                         ),
 
                     y:
                         Math.round(
-                            b.y
+                            bot.y
                         ),
 
                     carrying:
-                        b.carrying,
+                        bot.carrying,
 
                     task:
-                        b.task
-                            ? b.task.type
+                        bot.task
+                            ? bot.task.type
                             : null
 
                 })
@@ -2804,38 +2486,38 @@ function buildState(
             Object.values(
                 room.customers
             ).map(
-                c => ({
+                customer => ({
 
                     id:
-                        c.id,
+                        customer.id,
 
                     type:
-                        c.type,
+                        customer.type,
 
                     x:
                         Math.round(
-                            c.x
+                            customer.x
                         ),
 
                     y:
                         Math.round(
-                            c.y
+                            customer.y
                         ),
 
                     state:
-                        c.state,
+                        customer.state,
 
                     pumpIndex:
-                        c.pumpIndex,
+                        customer.pumpIndex,
 
                     fuelProgress:
                         Math.floor(
-                            c.fuelProgress
+                            customer.fuelProgress
                         ),
 
                     shopProgress:
                         Math.floor(
-                            c.shopProgress
+                            customer.shopProgress
                         )
 
                 })
@@ -2846,22 +2528,22 @@ function buildState(
             Object.values(
                 room.tasks
             ).map(
-                t => ({
+                task => ({
 
                     id:
-                        t.id,
+                        task.id,
 
                     type:
-                        t.type,
+                        task.type,
 
                     x:
                         Math.round(
-                            t.x
+                            task.x
                         ),
 
                     y:
                         Math.round(
-                            t.y
+                            task.y
                         )
 
                 })
@@ -2877,7 +2559,7 @@ function buildState(
 
 
 /* =====================================================
-   NETWORK BROADCAST
+   BROADCAST
 ===================================================== */
 
 function broadcastRoom(
@@ -2904,218 +2586,284 @@ io.on(
     "connection",
     socket => {
 
+        console.log(
+            "Connected:",
+            socket.id
+        );
 
-        /* ---------------------------------------------
-           CREATE ROOM
-        --------------------------------------------- */
+
+        /*
+        Create station.
+        */
 
         socket.on(
             "createRoom",
             name => {
 
-                const room =
-                    createRoom();
+                try {
+
+                    const room =
+                        createRoom();
 
 
-                room.hostId =
-                    socket.id;
+                    room.hostId =
+                        socket.id;
 
 
-                socket.join(
-                    room.code
-                );
-
-
-                room.players[
-                    socket.id
-                ] =
-                    createWorker(
-
-                        socket.id,
-
-                        cleanName(
-                            name
-                        ),
-
-                        160,
-
-                        245,
-
-                        "player",
-
-                        "#ff5555"
-
+                    socket.join(
+                        room.code
                     );
 
 
-                socket.emit(
-                    "joined",
-                    {
+                    room.players[
+                        socket.id
+                    ] =
+                        createWorker(
 
-                        roomCode:
-                            room.code,
-
-                        playerId:
                             socket.id,
 
-                        isHost:
-                            true
+                            sanitizeName(
+                                name
+                            ),
 
-                    }
-                );
+                            160,
+
+                            300,
+
+                            "player",
+
+                            "#ff5555"
+
+                        );
 
 
-                broadcastRoom(
-                    room
-                );
+                    socket.emit(
+                        "joined",
+                        {
+
+                            roomCode:
+                                room.code,
+
+                            playerId:
+                                socket.id,
+
+                            isHost:
+                                true
+
+                        }
+                    );
+
+
+                    broadcastRoom(
+                        room
+                    );
+
+
+                    console.log(
+                        "Room created:",
+                        room.code
+                    );
+
+                }
+
+                catch (
+                    error
+                ) {
+
+                    console.error(
+                        "Create room error:",
+                        error
+                    );
+
+
+                    socket.emit(
+                        "errorMessage",
+                        "Could not create station."
+                    );
+
+                }
 
             }
         );
 
 
-        /* ---------------------------------------------
-           JOIN ROOM
-        --------------------------------------------- */
+        /*
+        Join station.
+        */
 
         socket.on(
             "joinRoom",
             data => {
 
-                const code =
-                    String(
-                        data.code ||
-                        ""
-                    )
-                    .trim()
-                    .toUpperCase();
+                try {
+
+                    const code =
+                        String(
+                            data &&
+                            data.code ||
+                            ""
+                        )
+                        .trim()
+                        .toUpperCase();
 
 
-                const room =
-                    rooms[code];
+                    const room =
+                        rooms[code];
 
 
-                if (
-                    !room
-                ) {
+                    if (
+                        !room
+                    ) {
 
-                    socket.emit(
-                        "errorMessage",
-                        "Station not found."
-                    );
+                        socket.emit(
+                            "errorMessage",
+                            "Station not found."
+                        );
 
-                    return;
-
-                }
-
-
-                if (
-                    room.started
-                ) {
-
-                    socket.emit(
-                        "errorMessage",
-                        "The shift has already started."
-                    );
-
-                    return;
-
-                }
-
-
-                if (
-                    Object.keys(
-                        room.players
-                    ).length >=
-                    MAX_PLAYERS
-                ) {
-
-                    socket.emit(
-                        "errorMessage",
-                        "This station is full."
-                    );
-
-                    return;
-
-                }
-
-
-                const count =
-                    Object.keys(
-                        room.players
-                    ).length;
-
-
-                socket.join(
-                    room.code
-                );
-
-
-                room.players[
-                    socket.id
-                ] =
-                    createWorker(
-
-                        socket.id,
-
-                        cleanName(
-                            data.name
-                        ),
-
-                        160 +
-                        count *
-                        25,
-
-                        245,
-
-                        "player",
-
-                        [
-                            "#ff5555",
-                            "#4dabf7",
-                            "#51cf66",
-                            "#fcc419"
-                        ][
-                            count
-                        ]
-
-                    );
-
-
-                socket.emit(
-                    "joined",
-                    {
-
-                        roomCode:
-                            room.code,
-
-                        playerId:
-                            socket.id,
-
-                        isHost:
-                            false
+                        return;
 
                     }
-                );
 
 
-                broadcastRoom(
-                    room
-                );
+                    if (
+                        room.started
+                    ) {
+
+                        socket.emit(
+                            "errorMessage",
+                            "The shift has already started."
+                        );
+
+                        return;
+
+                    }
+
+
+                    const playerCount =
+                        Object.keys(
+                            room.players
+                        ).length;
+
+
+                    if (
+                        playerCount >=
+                        MAX_PLAYERS
+                    ) {
+
+                        socket.emit(
+                            "errorMessage",
+                            "This station is full."
+                        );
+
+                        return;
+
+                    }
+
+
+                    const colors = [
+
+                        "#ff5555",
+
+                        "#4dabf7",
+
+                        "#51cf66",
+
+                        "#fcc419"
+
+                    ];
+
+
+                    socket.join(
+                        room.code
+                    );
+
+
+                    room.players[
+                        socket.id
+                    ] =
+                        createWorker(
+
+                            socket.id,
+
+                            sanitizeName(
+                                data.name
+                            ),
+
+                            160 +
+                            playerCount *
+                            30,
+
+                            300,
+
+                            "player",
+
+                            colors[
+                                playerCount
+                            ]
+
+                        );
+
+
+                    socket.emit(
+                        "joined",
+                        {
+
+                            roomCode:
+                                room.code,
+
+                            playerId:
+                                socket.id,
+
+                            isHost:
+                                false
+
+                        }
+                    );
+
+
+                    broadcastRoom(
+                        room
+                    );
+
+
+                    console.log(
+                        "Player joined:",
+                        room.code
+                    );
+
+                }
+
+                catch (
+                    error
+                ) {
+
+                    console.error(
+                        "Join room error:",
+                        error
+                    );
+
+
+                    socket.emit(
+                        "errorMessage",
+                        "Could not join station."
+                    );
+
+                }
 
             }
         );
 
 
-        /* ---------------------------------------------
-           START
-        --------------------------------------------- */
+        /*
+        Start game.
+        */
 
         socket.on(
             "startGame",
             () => {
 
                 const room =
-                    getRoomBySocket(
+                    findRoomByPlayer(
                         socket.id
                     );
 
@@ -3151,16 +2899,16 @@ io.on(
         );
 
 
-        /* ---------------------------------------------
-           PLAYER INPUT
-        --------------------------------------------- */
+        /*
+        Movement.
+        */
 
         socket.on(
             "input",
             input => {
 
                 const room =
-                    getRoomBySocket(
+                    findRoomByPlayer(
                         socket.id
                     );
 
@@ -3205,23 +2953,22 @@ io.on(
         );
 
 
-        /* ---------------------------------------------
-           INTERACT
-        --------------------------------------------- */
+        /*
+        Interaction.
+        */
 
         socket.on(
             "interact",
             () => {
 
                 const room =
-                    getRoomBySocket(
+                    findRoomByPlayer(
                         socket.id
                     );
 
 
                 if (
-                    !room ||
-                    !room.started
+                    !room
                 ) {
 
                     return;
@@ -3239,7 +2986,7 @@ io.on(
                     player
                 ) {
 
-                    playerInteract(
+                    interact(
                         room,
                         player
                     );
@@ -3250,16 +2997,16 @@ io.on(
         );
 
 
-        /* ---------------------------------------------
-           HIRE GENERAL EMPLOYEE
-        --------------------------------------------- */
+        /*
+        Hire bot.
+        */
 
         socket.on(
             "hireBot",
             () => {
 
                 const room =
-                    getRoomBySocket(
+                    findRoomByPlayer(
                         socket.id
                     );
 
@@ -3284,14 +3031,18 @@ io.on(
                 }
 
 
-                if (
+                const botCount =
                     Object.keys(
                         room.bots
-                    ).length >=
+                    ).length;
+
+
+                if (
+                    botCount >=
                     Math.min(
                         MAX_BOTS,
                         room.upgrades
-                            .employeeSlots
+                            .employees
                     )
                 ) {
 
@@ -3317,13 +3068,13 @@ io.on(
                         "Employee " +
                         room.nextBotId,
 
-                        300,
+                        320,
 
-                        240,
+                        300,
 
                         "bot",
 
-                        "#9b5de5"
+                        "#b36bff"
 
                     );
 
@@ -3336,16 +3087,16 @@ io.on(
         );
 
 
-        /* ---------------------------------------------
-           UPGRADES
-        --------------------------------------------- */
+        /*
+        Upgrades.
+        */
 
         socket.on(
             "upgrade",
             type => {
 
                 const room =
-                    getRoomBySocket(
+                    findRoomByPlayer(
                         socket.id
                     );
 
@@ -3390,11 +3141,10 @@ io.on(
                     room.money -=
                         200;
 
-                    room.upgrades
-                        .shelfCapacity++;
+                    room.upgrades.shelves++;
 
                     room.maxStock +=
-                        20;
+                        25;
 
                 }
 
@@ -3406,16 +3156,14 @@ io.on(
                     room.money >=
                     300 &&
 
-                    room.upgrades
-                        .employeeSlots <
+                    room.upgrades.employees <
                     MAX_BOTS
                 ) {
 
                     room.money -=
                         300;
 
-                    room.upgrades
-                        .employeeSlots++;
+                    room.upgrades.employees++;
 
                 }
 
@@ -3428,16 +3176,23 @@ io.on(
         );
 
 
-        /* ---------------------------------------------
-           DISCONNECT
-        --------------------------------------------- */
+        /*
+        Disconnect.
+        */
 
         socket.on(
             "disconnect",
-            () => {
+            reason => {
+
+                console.log(
+                    "Disconnected:",
+                    socket.id,
+                    reason
+                );
+
 
                 const room =
-                    getRoomBySocket(
+                    findRoomByPlayer(
                         socket.id
                     );
 
@@ -3474,6 +3229,10 @@ io.on(
                 ];
 
 
+                /*
+                Transfer host.
+                */
+
                 if (
                     room.hostId ===
                     socket.id
@@ -3486,7 +3245,8 @@ io.on(
 
 
                     if (
-                        remaining.length
+                        remaining.length >
+                        0
                     ) {
 
                         room.hostId =
@@ -3519,7 +3279,7 @@ io.on(
 
 
 /* =====================================================
-   SIMULATION LOOP
+   GAME LOOP
 ===================================================== */
 
 setInterval(
@@ -3537,7 +3297,8 @@ setInterval(
         }
 
     },
-    SIMULATION_MS
+    1000 /
+    SIMULATION_RATE
 );
 
 
@@ -3560,13 +3321,21 @@ setInterval(
         }
 
     },
-    NETWORK_MS
+    1000 /
+    NETWORK_RATE
 );
 
 
 /* =====================================================
    EXPRESS
 ===================================================== */
+
+app.use(
+    express.static(
+        __dirname
+    )
+);
+
 
 app.get(
     "/",
@@ -3584,15 +3353,16 @@ app.get(
 
 
 /* =====================================================
-   SERVER
+   SERVER START
 ===================================================== */
 
 server.listen(
     PORT,
+    "0.0.0.0",
     () => {
 
         console.log(
-            `Octane 2.0 running on port ${PORT}`
+            `Octane server running on port ${PORT}`
         );
 
     }
